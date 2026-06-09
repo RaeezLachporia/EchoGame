@@ -13,6 +13,8 @@ public class CameraManager : MonoBehaviour
     public float cameraPivotSpeed = 2f;
     public float lookAngle;
     public float pivotAngle;
+    public float minimumPivotAngle = -35f; // how far the camera can look down
+    public float maximumPivotAngle = 35f;  // how far the camera can look up
     private Vector3 offset;
     private void Awake()
     {
@@ -37,7 +39,8 @@ public class CameraManager : MonoBehaviour
     {
         lookAngle = lookAngle + (inputManager.cameraInputX * cameraLookSpeed);
         pivotAngle = pivotAngle - (inputManager.cameraInputY * cameraPivotSpeed);
-        
+        pivotAngle = Mathf.Clamp(pivotAngle, minimumPivotAngle, maximumPivotAngle); // stop the camera flipping over
+
         Vector3 rotation = Vector3.zero;
         rotation.y = lookAngle;
         Quaternion targetRotation = Quaternion.Euler(rotation);

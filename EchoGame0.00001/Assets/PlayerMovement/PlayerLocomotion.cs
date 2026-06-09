@@ -7,7 +7,9 @@ public class PlayerLocomotion : MonoBehaviour
    public Transform cameraObject;
    public Vector3 moveDirection;
    Rigidbody playerRigidBody;
-   public float movementSpeed = 7;
+   public float walkSpeed = 2f;
+   public float runSpeed = 6f;
+   public float sprintSpeed = 10f;
    public float rotationSpeed = 15;
    private void Awake()
    {
@@ -23,28 +25,29 @@ public class PlayerLocomotion : MonoBehaviour
    }
    private void handleMovement()
    {
+      float speed = inputManager.isSprinting ? sprintSpeed
+                  : inputManager.moveAmount <= 0.5f ? walkSpeed
+                  : runSpeed;
+
       moveDirection = cameraObject.forward * inputManager.verticalInput;
-      moveDirection = moveDirection +cameraObject.right * inputManager.horizontalInput;
+      moveDirection += cameraObject.right * inputManager.horizontalInput;
       moveDirection.Normalize();
       moveDirection.y = 0;
-      moveDirection = moveDirection* movementSpeed;
-      
-      Vector3 movementVelocity = moveDirection;
-      playerRigidBody.linearVelocity = movementVelocity;
+      moveDirection *= speed;
+
+      playerRigidBody.linearVelocity = moveDirection;
    }
 
    private void handleRotation()
    {
-      Vector3 targetDirection = Vector3.zero;
-      targetDirection.x = inputManager.horizontalInput;
-      targetDirection.z = inputManager.verticalInput;
+      Vector3 targetDirection = cameraObject.forward * inputManager.verticalInput;
+      targetDirection += cameraObject.right * inputManager.horizontalInput;
       targetDirection.Normalize();
       targetDirection.y = 0;
 
-      if (targetDirection== Vector3.zero)
-      {
+      if (targetDirection == Vector3.zero)
          targetDirection = transform.forward;
-      }
+
       Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
       transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
    }

@@ -6,14 +6,16 @@ public class AnimatorManager : MonoBehaviour
    Animator animator;
    public int horizontal;
    public int vertical;
+   int isSprinting;
    private void Awake()
    {
       animator = GetComponent<Animator>();
       horizontal = Animator.StringToHash("Horizontal");
       vertical = Animator.StringToHash("Vertical");
+      isSprinting = Animator.StringToHash("isSprinting");
    }
 
-   public void updateAnimatorValues(float horizontalMovement, float verticalMovement )
+   public void updateAnimatorValues(float horizontalMovement, float verticalMovement, bool sprinting = false)
    {
       //Snapping animation
       float snappedHorizontal;
@@ -42,13 +44,17 @@ public class AnimatorManager : MonoBehaviour
       }
       #endregion
       #region Snapped Vertical
-      if (verticalMovement > 0 && verticalMovement < 0.55f)
+      if (verticalMovement > 1.55f)
       {
-         snappedVertical = 0.5f;
+         snappedVertical = 2f;
       }
       else if (verticalMovement > 0.55f)
       {
          snappedVertical = 1f;
+      }
+      else if (verticalMovement > 0 && verticalMovement < 0.55f)
+      {
+         snappedVertical = 0.5f;
       }
       else if(verticalMovement < 0 && verticalMovement > -0.55f)
       {
@@ -63,7 +69,8 @@ public class AnimatorManager : MonoBehaviour
          snappedVertical = 0f;
       }
       #endregion
-      animator.SetFloat(horizontal, snappedHorizontal,0.1f,Time.deltaTime);
-      animator.SetFloat(vertical, verticalMovement,0.1f,Time.deltaTime);
+      animator.SetFloat(horizontal, snappedHorizontal, 0.1f, Time.deltaTime);
+      animator.SetFloat(vertical, snappedVertical, 0.1f, Time.deltaTime);
+      animator.SetBool(isSprinting, sprinting);
    }
 }
