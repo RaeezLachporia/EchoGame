@@ -48,8 +48,8 @@ public class CameraManager : MonoBehaviour
     
     private void RotateCamera()
     {
-        lookAngle = lookAngle + (inputManager.cameraInputX * cameraLookSpeed);
-        pivotAngle = pivotAngle - (inputManager.cameraInputY * cameraPivotSpeed);
+        lookAngle  += inputManager.cameraInputX * cameraLookSpeed;
+        pivotAngle -= inputManager.cameraInputY * cameraPivotSpeed;
         pivotAngle = Mathf.Clamp(pivotAngle, minimumPivotAngle, maximumPivotAngle); // stop the camera flipping over
 
         Vector3 rotation = Vector3.zero;

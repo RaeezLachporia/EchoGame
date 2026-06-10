@@ -4,6 +4,7 @@ using UnityEngine;
 public class PlayerLocomotion : MonoBehaviour
 {
    InputManager inputManager;
+   AnimatorManager animatorManager;
    public Transform cameraObject;
    public Vector3 moveDirection;
    Rigidbody playerRigidBody;
@@ -11,18 +12,79 @@ public class PlayerLocomotion : MonoBehaviour
    public float runSpeed = 6f;
    public float sprintSpeed = 10f;
    public float rotationSpeed = 15;
+   public float jumpForce = 6f;
+   public float dodgeSpeed = 8f;
+   public float dodgeDuration = 0.2f;
+   private bool isGrounded;
+   private float groundedTimer;
+   private float jumpCooldown;
+   private float dodgeTimer;
+   private const float groundedGracePeriod = 0.15f;
+   private const float jumpCooldownTime = 0.25f;
+
    private void Awake()
    {
       inputManager = GetComponent<InputManager>();
+      animatorManager = GetComponent<AnimatorManager>();
       playerRigidBody = GetComponent<Rigidbody>();
       cameraObject = Camera.main.transform;
    }
 
    public void handleAllMovement()
    {
+      checkGrounded();
+      handleJump();
+      handleDodge();
       handleMovement();
       handleRotation();
    }
+
+   private void checkGrounded()
+   {
+      if (jumpCooldown > 0f)
+      {
+         jumpCooldown -= Time.fixedDeltaTime;
+         isGrounded = false;
+         return;
+      }
+
+      if (Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down, 0.65f))
+         groundedTimer = groundedGracePeriod;
+      else
+         groundedTimer -= Time.fixedDeltaTime;
+
+      isGrounded = groundedTimer > 0f;
+   }
+
+   private void handleJump()
+   {
+      if (!inputManager.jumpInput) return;
+      inputManager.jumpInput = false;
+
+      if (!isGrounded) return;
+
+      animatorManager.playJumpAnimation();
+      playerRigidBody.linearVelocity = new Vector3(playerRigidBody.linearVelocity.x, jumpForce, playerRigidBody.linearVelocity.z);
+      jumpCooldown = jumpCooldownTime;
+      isGrounded = false;
+   }
+
+   private void handleDodge()
+   {
+      if (dodgeTimer > 0f)
+      {
+         dodgeTimer -= Time.fixedDeltaTime;
+         playerRigidBody.linearVelocity = new Vector3(-transform.forward.x * dodgeSpeed, playerRigidBody.linearVelocity.y, -transform.forward.z * dodgeSpeed);
+         return;
+      }
+
+      if (!inputManager.dodgeInput) return;
+      inputManager.dodgeInput = false;
+
+      animatorManager.playDodgeAnimation();
+      dodgeTimer = dodgeDuration;
+   }
+
    private void handleMovement()
    {
       float speed = inputManager.isSprinting ? sprintSpeed
@@ -35,7 +97,15 @@ public class PlayerLocomotion : MonoBehaviour
       moveDirection.y = 0;
       moveDirection *= speed;
 
-      playerRigidBody.linearVelocity = moveDirection;
+      if (isGrounded)
+      {
+         playerRigidBody.linearVelocity = moveDirection;
+      }
+      else
+      {
+         // Keep gravity/jump Y velocity, allow air steering
+         playerRigidBody.linearVelocity = new Vector3(moveDirection.x, playerRigidBody.linearVelocity.y, moveDirection.z);
+      }
    }
 
    private void handleRotation()

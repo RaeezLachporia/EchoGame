@@ -16,6 +16,8 @@ public class InputManager : MonoBehaviour
    public float verticalInput;
    public float horizontalInput;
    public bool isSprinting;
+   public bool jumpInput;
+   public bool dodgeInput;
 
    private void Awake()
    {
@@ -26,7 +28,7 @@ public class InputManager : MonoBehaviour
       if (playerControls == null)
       {
          playerControls = new PlayerControls();
-         
+
          playerControls.PlayerMovement.Movement.performed += i => movementInput = i.ReadValue<Vector2>();
          playerControls.PlayerMovement.Camera.performed += i => cameraInput = i.ReadValue<Vector2>();
          // Mouse delta never sends a "stop" value, so reset to zero when the action cancels.
@@ -34,8 +36,10 @@ public class InputManager : MonoBehaviour
          playerControls.PlayerMovement.Camera.canceled += i => cameraInput = Vector2.zero;
          playerControls.PlayerMovement.Sprint.performed += i => isSprinting = true;
          playerControls.PlayerMovement.Sprint.canceled  += i => isSprinting = false;
+         playerControls.PlayerMovement.Jump.performed   += i => jumpInput = true;
+         playerControls.PlayerMovement.Dodge.performed  += i => dodgeInput = true;
       }
-      
+
       playerControls.Enable();
    }
 

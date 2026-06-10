@@ -7,12 +7,26 @@ public class AnimatorManager : MonoBehaviour
    public int horizontal;
    public int vertical;
    int isSprinting;
+   int isJumping;
+   int isDodging;
    private void Awake()
    {
       animator = GetComponent<Animator>();
       horizontal = Animator.StringToHash("Horizontal");
       vertical = Animator.StringToHash("Vertical");
       isSprinting = Animator.StringToHash("isSprinting");
+      isJumping = Animator.StringToHash("IsJumping");
+      isDodging = Animator.StringToHash("IsDodging");
+   }
+
+   public void playJumpAnimation()
+   {
+      animator.SetTrigger(isJumping);
+   }
+
+   public void playDodgeAnimation()
+   {
+      animator.SetTrigger(isDodging);
    }
 
    public void updateAnimatorValues(float horizontalMovement, float verticalMovement, bool sprinting = false)
