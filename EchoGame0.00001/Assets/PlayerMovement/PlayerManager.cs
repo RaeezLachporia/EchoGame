@@ -17,6 +17,7 @@ public class PlayerManager : MonoBehaviour
     private void Update()
     {
         inputManager.handleAllInput();
+        playerLocomotion.tryInitiateDodge();
     }
 
     private void FixedUpdate()

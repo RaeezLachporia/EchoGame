@@ -70,25 +70,24 @@ public class PlayerLocomotion : MonoBehaviour
       isGrounded = false;
    }
 
-   private void handleDodge()
+   public void tryInitiateDodge()
    {
-      if (dodgeTimer > 0f)
-      {
-         dodgeTimer -= Time.fixedDeltaTime;
-         playerRigidBody.linearVelocity = new Vector3(rollDirection.x * dodgeSpeed, playerRigidBody.linearVelocity.y, rollDirection.z * dodgeSpeed);
-         return;
-      }
-
-      if (!inputManager.dodgeInput) return;
+      if (!inputManager.dodgeInput || dodgeTimer > 0f) return;
       inputManager.dodgeInput = false;
 
-      // Use movement direction if moving, otherwise roll forward
       rollDirection = inputManager.moveAmount > 0.1f
          ? new Vector3(moveDirection.normalized.x, 0f, moveDirection.normalized.z)
          : new Vector3(transform.forward.x, 0f, transform.forward.z);
 
       animatorManager.playRollAnimation();
       dodgeTimer = dodgeDuration;
+      playerRigidBody.linearVelocity = new Vector3(rollDirection.x * dodgeSpeed, playerRigidBody.linearVelocity.y, rollDirection.z * dodgeSpeed);
+   }
+
+   private void handleDodge()
+   {
+      if (dodgeTimer <= 0f) return;
+      dodgeTimer -= Time.fixedDeltaTime;
       playerRigidBody.linearVelocity = new Vector3(rollDirection.x * dodgeSpeed, playerRigidBody.linearVelocity.y, rollDirection.z * dodgeSpeed);
    }
 
