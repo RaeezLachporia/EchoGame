@@ -15,6 +15,7 @@ public class PlayerLocomotion : MonoBehaviour
    public float jumpForce = 6f;
    public float dodgeSpeed = 8f;
    public float dodgeDuration = 0.2f;
+   private Vector3 rollDirection;
    private bool isGrounded;
    private float groundedTimer;
    private float jumpCooldown;
@@ -74,19 +75,27 @@ public class PlayerLocomotion : MonoBehaviour
       if (dodgeTimer > 0f)
       {
          dodgeTimer -= Time.fixedDeltaTime;
-         playerRigidBody.linearVelocity = new Vector3(-transform.forward.x * dodgeSpeed, playerRigidBody.linearVelocity.y, -transform.forward.z * dodgeSpeed);
+         playerRigidBody.linearVelocity = new Vector3(rollDirection.x * dodgeSpeed, playerRigidBody.linearVelocity.y, rollDirection.z * dodgeSpeed);
          return;
       }
 
       if (!inputManager.dodgeInput) return;
       inputManager.dodgeInput = false;
 
-      animatorManager.playDodgeAnimation();
+      // Use movement direction if moving, otherwise roll forward
+      rollDirection = inputManager.moveAmount > 0.1f
+         ? new Vector3(moveDirection.normalized.x, 0f, moveDirection.normalized.z)
+         : new Vector3(transform.forward.x, 0f, transform.forward.z);
+
+      animatorManager.playRollAnimation();
       dodgeTimer = dodgeDuration;
+      playerRigidBody.linearVelocity = new Vector3(rollDirection.x * dodgeSpeed, playerRigidBody.linearVelocity.y, rollDirection.z * dodgeSpeed);
    }
 
    private void handleMovement()
    {
+      if (dodgeTimer > 0f) return;
+
       float speed = inputManager.isSprinting ? sprintSpeed
                   : inputManager.moveAmount <= 0.5f ? walkSpeed
                   : runSpeed;
