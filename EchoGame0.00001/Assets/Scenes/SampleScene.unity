@@ -409,6 +409,7 @@ GameObject:
   - component: {fileID: 764257481}
   - component: {fileID: 764257480}
   - component: {fileID: 764257479}
+  - component: {fileID: 764257485}
   m_Layer: 0
   m_Name: Companion
   m_TagString: Untagged
@@ -429,11 +430,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicPlayerFollowScript
   followDistance: 2.5
+  resumeDistance: 3.5
   runDistance: 6
+  sprintDistance: 12
   walkSpeed: 2
   runSpeed: 6
+  sprintSpeed: 10
   rotationSpeed: 10
+  jumpDuration: 0.6
+  jumpHeight: 1.5
+  animator: {fileID: 764257485}
+  animationDampTime: 0.1
+  walkAnimSpeed: 2
+  runAnimSpeed: 6
+  sprintAnimSpeed: 10
+  teleportEnabled: 1
+  teleportDistance: 18
+  teleportOffset: 2
   player: {fileID: 1053582027}
+  currentSpeed: 0
 --- !u!195 &764257480
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -552,6 +567,28 @@ Transform:
   - {fileID: 104492267}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &764257485
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764257478}
+  m_Enabled: 1
+  m_Avatar: {fileID: 9000000, guid: 0df36812a40e4a84883ca4aad08a1a43, type: 3}
+  m_Controller: {fileID: 9100000, guid: faf6743947a4cfa47bc40c4fdf18f763, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1068,7 +1105,7 @@ MonoBehaviour:
   m_OverrideTileSize: 0
   m_TileSize: 256
   m_OverrideVoxelSize: 0
-  m_VoxelSize: 0.16666667
+  m_VoxelSize: 0.1
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: f6cebeb0ea54ab9408558df455810591, type: 2}
   m_BuildHeightMesh: 0
