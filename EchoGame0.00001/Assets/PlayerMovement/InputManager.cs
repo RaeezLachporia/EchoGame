@@ -18,6 +18,7 @@ public class InputManager : MonoBehaviour
    public bool isSprinting;
    public bool jumpInput;
    public bool dodgeInput;
+   public bool attackInput;
 
    private void Awake()
    {
@@ -37,7 +38,8 @@ public class InputManager : MonoBehaviour
          playerControls.PlayerMovement.Sprint.performed += i => isSprinting = true;
          playerControls.PlayerMovement.Sprint.canceled  += i => isSprinting = false;
          playerControls.PlayerMovement.Jump.performed   += i => jumpInput = true;
-         playerControls.PlayerMovement.Dodge.performed  += i => dodgeInput = true;
+         playerControls.PlayerMovement.Dodge.performed   += i => dodgeInput = true;
+         playerControls.PlayerMovement.Attack.performed  += i => attackInput = true;
       }
 
       playerControls.Enable();

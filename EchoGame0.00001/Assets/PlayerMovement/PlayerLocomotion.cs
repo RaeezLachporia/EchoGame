@@ -5,6 +5,7 @@ public class PlayerLocomotion : MonoBehaviour
 {
    InputManager inputManager;
    AnimatorManager animatorManager;
+   PlayerBasicCombat playerCombat;
    public Transform cameraObject;
    public Vector3 moveDirection;
    Rigidbody playerRigidBody;
@@ -27,6 +28,7 @@ public class PlayerLocomotion : MonoBehaviour
    {
       inputManager = GetComponent<InputManager>();
       animatorManager = GetComponent<AnimatorManager>();
+      playerCombat = GetComponent<PlayerBasicCombat>();
       playerRigidBody = GetComponent<Rigidbody>();
       cameraObject = Camera.main.transform;
    }
@@ -95,6 +97,12 @@ public class PlayerLocomotion : MonoBehaviour
    {
       if (dodgeTimer > 0f) return;
 
+      if (playerCombat.isAttacking)
+      {
+         playerRigidBody.linearVelocity = new Vector3(0f, playerRigidBody.linearVelocity.y, 0f);
+         return;
+      }
+
       float speed = inputManager.isSprinting ? sprintSpeed
                   : inputManager.moveAmount <= 0.5f ? walkSpeed
                   : runSpeed;
@@ -118,6 +126,8 @@ public class PlayerLocomotion : MonoBehaviour
 
    private void handleRotation()
    {
+      if (playerCombat.isAttacking) return;
+
       Vector3 targetDirection = cameraObject.forward * inputManager.verticalInput;
       targetDirection += cameraObject.right * inputManager.horizontalInput;
       targetDirection.Normalize();

@@ -963,24 +963,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1370623924971718356, guid: 2eb7c8cd2299221429cbb97152489482, type: 3}
   m_PrefabInstance: {fileID: 1319964660998180552}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1053582028
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1053582017}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 80177ae8c4206bb4abe41276431168ef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerBasicCombat
-  attackDamage: 20
-  attackRange: 1.26
-  attackCooldown: 0.8
-  enemyLayers:
-    serializedVersion: 2
-    m_Bits: 128
 --- !u!1 &1129367729
 GameObject:
   m_ObjectHideFlags: 0
@@ -1264,9 +1246,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1751547991260863598, guid: 2eb7c8cd2299221429cbb97152489482, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1053582025}
-    - targetCorrespondingSourceObject: {fileID: 1751547991260863598, guid: 2eb7c8cd2299221429cbb97152489482, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1053582028}
   m_SourcePrefab: {fileID: 100100000, guid: 2eb7c8cd2299221429cbb97152489482, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
