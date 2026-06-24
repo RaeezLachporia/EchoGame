@@ -1,15 +1,47 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Comapnion : MonoBehaviour, IDamageable
 {
     [Header("Identity")]
     [SerializeField] private string displayName = "Companion";
+    [SerializeField] private string playerTag = "Player";
 
     [Header("Health")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth = 100f;
 
+    [Header("Push Response")]
+    [Tooltip("Scales player impact speed into companion push speed. 0.3 = a 6 m/s sprint pushes the companion at ~1.8 m/s.")]
+    [SerializeField] private float pushScale = 0.35f;
+    [Tooltip("How quickly the push decays once the player stops bashing (higher = settles sooner).")]
+    [SerializeField] private float pushDamping = 6f;
+    [Tooltip("How fast sustained contact blends the push toward the player's current impact speed.")]
+    [SerializeField] private float sustainResponse = 10f;
+    [Tooltip("Cap on push speed in m/s — keeps a sprint-into-companion from launching them.")]
+    [SerializeField] private float maxPushSpeed = 4f;
+
     private int hudSlot = -1;
+    private Rigidbody rb;
+    private NavMeshAgent agent;
+    private Vector3 pushVelocity;
+
+    void Awake()
+    {
+        // Companion movement is driven by NavMeshAgent (BasicPlayerFollowScript).
+        // A dynamic Rigidbody fights the agent — collisions impart velocity, the agent
+        // loses its path, and the companion slides off-mesh. Kinematic lets physics
+        // events still fire while leaving position fully under the agent's control;
+        // any "push back" from a bump is applied via NavMeshAgent.Move so it stays
+        // on-mesh and never builds runaway momentum.
+        rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+        agent = GetComponent<NavMeshAgent>();
+    }
 
     void Start()
     {
@@ -20,7 +52,55 @@ public class Comapnion : MonoBehaviour, IDamageable
 
     void Update()
     {
+        if (agent == null || pushVelocity.sqrMagnitude < 0.0025f)
+        {
+            pushVelocity = Vector3.zero;
+            return;
+        }
 
+        // Apply the push via the agent so it slides along the navmesh, not through it.
+        agent.Move(pushVelocity * Time.deltaTime);
+        // Exponential decay — the step-back eases out instead of stopping dead.
+        pushVelocity *= Mathf.Exp(-pushDamping * Time.deltaTime);
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (!collision.collider.CompareTag(playerTag)) return;
+        pushVelocity = ComputePush(collision);
+        Interact();
+    }
+
+    void OnCollisionStay(Collision collision)
+    {
+        if (!collision.collider.CompareTag(playerTag)) return;
+        // Lean into the companion and they keep getting nudged proportional to your speed.
+        Vector3 desired = ComputePush(collision);
+        pushVelocity = Vector3.Lerp(pushVelocity, desired, sustainResponse * Time.fixedDeltaTime);
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag(playerTag))
+            Interact();
+    }
+
+    private Vector3 ComputePush(Collision collision)
+    {
+        Vector3 away = transform.position - collision.transform.position;
+        away.y = 0f;
+        if (away.sqrMagnitude < 0.0001f) return Vector3.zero;
+        away.Normalize();
+
+        float impactSpeed = collision.relativeVelocity.magnitude;
+        Vector3 push = away * (impactSpeed * pushScale);
+        return Vector3.ClampMagnitude(push, maxPushSpeed);
+    }
+
+    private void Interact()
+    {
+        // TODO: hook up dialogue / give item / follow toggle here.
+        Debug.Log($"{displayName} interacted with player");
     }
 
     public void TakeDamage(float damage)

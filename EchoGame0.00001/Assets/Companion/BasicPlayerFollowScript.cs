@@ -36,6 +36,14 @@ public class BasicPlayerFollowScript : MonoBehaviour
     [Tooltip("How far behind the player to land when teleporting")]
     public float teleportOffset = 2f;
 
+    [Header("Formation & Stagger")]
+    [Tooltip("0..3 — each slot is a different angle/distance behind the player. Set 0 on companion A, 1 on B, etc. so they don't all target the same point.")]
+    [SerializeField] private int formationSlot = 0;
+    [Tooltip("How far from the player the formation slot sits.")]
+    [SerializeField] private float formationRadius = 1.5f;
+    [Tooltip("Per-companion speed jitter. 0.15 = each companion's speed varies ±15% from the configured value, so multiple companions desync naturally.")]
+    [SerializeField, Range(0f, 0.5f)] private float speedVariance = 0.15f;
+
     [Header("References")]
     public Transform player;
 
@@ -46,6 +54,20 @@ public class BasicPlayerFollowScript : MonoBehaviour
     private InputManager playerInput;
     private bool isFollowing = false;
     private bool isJumping = false;
+
+    public bool IsFollowing => isFollowing;
+    public NavMeshAgent Agent => agent;
+
+    // Local-space offsets behind the player for slots 0..3 (x = right, z = forward).
+    // Negative z = behind the player. Two close-behind slots and two wider flanking slots.
+    private static readonly Vector3[] SlotDirections =
+    {
+        new Vector3(-0.5f, 0f, -1f), // behind-left
+        new Vector3( 0.5f, 0f, -1f), // behind-right
+        new Vector3(-1f,   0f, -0.4f), // left flank
+        new Vector3( 1f,   0f, -0.4f), // right flank
+    };
+    private float speedMultiplier = 1f;
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int JumpHash = Animator.StringToHash("IsJumping");
 
@@ -57,6 +79,11 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
         if (animator == null)
             animator = GetComponent<Animator>();
+
+        // Lock in a per-instance speed offset once so this companion always moves
+        // slightly faster or slower than its siblings — they drift in and out of
+        // sync instead of marching in lockstep.
+        speedMultiplier = 1f + Random.Range(-speedVariance, speedVariance);
     }
 
     private void Start()
@@ -94,6 +121,7 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
+        bool wasFollowing = isFollowing;
         if (isFollowing && distanceToPlayer <= followDistance)
             isFollowing = false;
         else if (!isFollowing && distanceToPlayer > resumeDistance)
@@ -101,10 +129,18 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
         if (!isFollowing)
         {
-            agent.ResetPath();
-            agent.velocity = Vector3.zero;
-            currentSpeed = 0f;
-            UpdateAnimation(0f);
+            // Clear our follow path exactly once on the transition so an idle/wander
+            // script (ComapnionBehaviour) can SetDestination without us wiping it
+            // every frame. Animation/rotation still tick from real agent.velocity
+            // below so wander movement animates and faces the right way.
+            if (wasFollowing)
+            {
+                agent.ResetPath();
+                agent.velocity = Vector3.zero;
+            }
+            currentSpeed = agent.velocity.magnitude;
+            UpdateAnimation(currentSpeed);
+            RotateTowardMovementDirection();
             return;
         }
 
@@ -118,12 +154,12 @@ public class BasicPlayerFollowScript : MonoBehaviour
         bool tooFarBehind = distanceToPlayer > sprintDistance;
 
         if (playerIsSprinting || tooFarBehind)
-            agent.speed = sprintSpeed;
+            agent.speed = sprintSpeed * speedMultiplier;
         else if (distanceToPlayer > runDistance)
-            agent.speed = runSpeed;
+            agent.speed = runSpeed * speedMultiplier;
         else
-            agent.speed = walkSpeed;
-        agent.SetDestination(player.position);
+            agent.speed = walkSpeed * speedMultiplier;
+        agent.SetDestination(GetFollowTarget());
 
         currentSpeed = agent.velocity.magnitude;
         UpdateAnimation(currentSpeed);
@@ -186,6 +222,16 @@ public class BasicPlayerFollowScript : MonoBehaviour
         transform.position = end;
         agent.CompleteOffMeshLink();
         isJumping = false;
+    }
+
+    private Vector3 GetFollowTarget()
+    {
+        // Pick the slot offset, rotate it into the player's facing so "behind-left"
+        // stays behind-left as the player turns, and place it relative to the player.
+        int slot = Mathf.Clamp(formationSlot, 0, SlotDirections.Length - 1);
+        Vector3 localOffset = SlotDirections[slot].normalized * formationRadius;
+        Quaternion playerYaw = Quaternion.Euler(0f, player.eulerAngles.y, 0f);
+        return player.position + playerYaw * localOffset;
     }
 
     private bool PathIsBlocked()
