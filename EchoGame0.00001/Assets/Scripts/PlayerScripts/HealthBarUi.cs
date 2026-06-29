@@ -1,11 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class HealthBarUi : MonoBehaviour
 {
     [SerializeField] private Slider slider;
-    [SerializeField] private Text label;
-    [SerializeField] private Text nameLabel;
+    [SerializeField] private TMP_Text label;
+    [SerializeField] private TMP_Text nameLabel;
     [SerializeField] private GameObject root;
 
     private float maxHealth;

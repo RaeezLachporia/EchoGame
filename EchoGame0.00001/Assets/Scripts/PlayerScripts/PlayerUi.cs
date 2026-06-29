@@ -25,6 +25,12 @@ public class PlayerUi : MonoBehaviour
         }
     }
 
+    public void TakeDamage(float damage)
+    {
+        Debug.Log($"[PlayerUi] TakeDamage({damage}), currentHealth {currentHealth} -> {currentHealth - damage}");
+        SetHealth(currentHealth - damage);
+    }
+
     public void SetHealth(float value)
     {
         currentHealth = Mathf.Clamp(value, 0f, maxHealth);
