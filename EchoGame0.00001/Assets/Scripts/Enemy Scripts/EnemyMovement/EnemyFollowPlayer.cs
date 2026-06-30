@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.AI;
 
+[RequireComponent(typeof(NavMeshAgent))]
 public class EnemyFollowPlayer : MonoBehaviour
 {
     [Header("Targets")]
@@ -16,9 +18,42 @@ public class EnemyFollowPlayer : MonoBehaviour
     [SerializeField] private LayerMask lineOfSightObstacles;
     [SerializeField] private float eyeHeight = 1.5f;
 
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+    [SerializeField] private float animationDampTime = 0.1f;
+
     private Transform player;
     private Transform companion;
     private Transform currentTarget;
+    private EnemyCombat combat;
+    private NavMeshAgent agent;
+    private static readonly int SpeedHash = Animator.StringToHash("Speed");
+
+    void Awake()
+    {
+        combat = GetComponent<EnemyCombat>();
+        if (animator == null) animator = GetComponentInChildren<Animator>();
+
+        agent = GetComponent<NavMeshAgent>();
+        // We drive rotation manually — facing the velocity direction while moving
+        // and the target while stopped gives smoother chase + hitbox alignment
+        // than letting the agent twist toward each path waypoint.
+        agent.updateRotation = false;
+        agent.speed = moveSpeed;
+        agent.stoppingDistance = stoppingDistance;
+
+        // A dynamic Rigidbody fights the agent: a bump from the player imparts
+        // velocity, the agent's path desyncs from its actual position, and both
+        // bodies slide. Kinematic still lets OnCollision* events fire (needed
+        // for the hitbox/damage to work), but leaves position fully under the
+        // agent's control. Same trick the companion uses.
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+    }
 
     void Start()
     {
@@ -31,14 +66,62 @@ public class EnemyFollowPlayer : MonoBehaviour
         if (player == null) AcquirePlayer();
         if (companion == null) AcquireCompanion();
 
-        currentTarget = ChooseTarget();
-        if (currentTarget == null) return;
+        // If the agent failed to spawn on the NavMesh, do nothing — SetDestination
+        // would just log warnings and the animation would jitter on garbage velocity.
+        if (!agent.isOnNavMesh)
+        {
+            if (animator != null) animator.SetFloat(SpeedHash, 0f);
+            return;
+        }
 
-        float distance = Vector3.Distance(transform.position, currentTarget.position);
-        if (distance > stoppingDistance)
-            MoveToward(currentTarget.position);
+        bool attacking = combat != null && combat.isAttacking;
 
-        FaceTarget(currentTarget.position);
+        if (attacking)
+        {
+            // Freeze pathing/rotation during the swing so the hitbox lands where committed.
+            if (agent.hasPath) agent.ResetPath();
+        }
+        else
+        {
+            currentTarget = ChooseTarget();
+            if (currentTarget != null)
+                agent.SetDestination(currentTarget.position);
+            else if (agent.hasPath)
+                agent.ResetPath();
+
+            HandleRotation();
+        }
+
+        UpdateAnimation();
+    }
+
+    private void HandleRotation()
+    {
+        // If we have a target, always pivot to face them — the enemy is "locked
+        // on", so movement and facing are decoupled. Otherwise the agent's
+        // loop-around-stoppingDistance path keeps velocity nonzero and the
+        // enemy would circle the player while staring at the path tangent.
+        if (currentTarget != null)
+        {
+            FaceTarget(currentTarget.position);
+            return;
+        }
+
+        // No target — face the direction we're wandering, if any.
+        Vector3 velocity = agent.velocity;
+        velocity.y = 0f;
+        if (velocity.sqrMagnitude > 0.01f)
+        {
+            Quaternion look = Quaternion.LookRotation(velocity.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, look, rotationSpeed * Time.deltaTime);
+        }
+    }
+
+    private void UpdateAnimation()
+    {
+        if (animator == null) return;
+        float speed = agent.velocity.magnitude;
+        animator.SetFloat(SpeedHash, speed, animationDampTime, Time.deltaTime);
     }
 
     private Transform ChooseTarget()
@@ -89,13 +172,6 @@ public class EnemyFollowPlayer : MonoBehaviour
             return hit.transform == target || hit.transform.IsChildOf(target);
         }
         return true;
-    }
-
-    private void MoveToward(Vector3 position)
-    {
-        Vector3 next = Vector3.MoveTowards(transform.position, position, moveSpeed * Time.deltaTime);
-        next.y = transform.position.y; // keep on current ground plane
-        transform.position = next;
     }
 
     private void FaceTarget(Vector3 position)

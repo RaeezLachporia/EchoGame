@@ -10,7 +10,20 @@ public class CompanionHealthHud : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        // Stray copies of this component (e.g. accidentally added to a companion
+        // GameObject) have empty slots but can still win the singleton race —
+        // the loser branch used to Destroy(gameObject), which nuked the real
+        // HUD's UI and any other companion. Only claim Instance with wired
+        // slots, and destroy just the duplicate component, not its host.
+        bool hasSlots = false;
+        for (int i = 0; i < slots.Length; i++)
+            if (slots[i] != null) { hasSlots = true; break; }
+
+        if (!hasSlots || (Instance != null && Instance != this))
+        {
+            Destroy(this);
+            return;
+        }
         Instance = this;
 
         for (int i = 0; i < slots.Length; i++)

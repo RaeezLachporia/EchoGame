@@ -17,7 +17,7 @@ public class PlayerLocomotion : MonoBehaviour
    public float dodgeSpeed = 8f;
    public float dodgeDuration = 0.2f;
    private Vector3 rollDirection;
-   private bool isGrounded;
+   public bool isGrounded { get; private set; }
    private float groundedTimer;
    private float jumpCooldown;
    private float dodgeTimer;

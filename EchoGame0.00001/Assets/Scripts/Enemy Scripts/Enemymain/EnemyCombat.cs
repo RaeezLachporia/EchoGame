@@ -7,81 +7,106 @@ public class EnemyCombat : MonoBehaviour
     [SerializeField] private string companionTag = "Comapnion";
 
     [Header("Attack")]
-    [SerializeField] private float attackRange = 2f;
+    [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackCooldown = 1.5f;
+    [Tooltip("Hit volume is centered this far in front of the enemy.")]
+    [SerializeField] private float hitForwardOffset = 0.8f;
+    [Tooltip("Vertical offset of the hit volume from the enemy's origin.")]
+    [SerializeField] private float hitVerticalOffset = 0.5f;
+    [Tooltip("Vertical extent of the hit volume (capsule height). 0 = sphere of radius attackRange.")]
+    [SerializeField] private float attackHeight = 0f;
+
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+    [Tooltip("Safety net: isAttacking is force-cleared after this long even if the EndAttack animation event never fires. Set a bit longer than the attack clip.")]
+    [SerializeField] private float maxAttackDuration = 2f;
+
+    public bool isAttacking { get; private set; }
+
+    private static readonly int AttackHash = Animator.StringToHash("Attack");
 
     private float cooldownRemaining;
-    private float nextDiagLog;
+    private float attackElapsed;
+
+    void Awake()
+    {
+        if (animator == null) animator = GetComponentInChildren<Animator>();
+    }
 
     void Update()
     {
-        if (Time.time >= nextDiagLog)
-        {
-            nextDiagLog = Time.time + 1f;
-            DiagnosticLog();
-        }
+        if (cooldownRemaining > 0f) cooldownRemaining -= Time.deltaTime;
 
-        if (cooldownRemaining > 0f)
+        if (isAttacking)
         {
-            cooldownRemaining -= Time.deltaTime;
+            attackElapsed += Time.deltaTime;
+            if (attackElapsed >= maxAttackDuration) isAttacking = false;
             return;
         }
 
-        IDamageable target = FindTargetInRange();
-        if (target == null) return;
+        if (cooldownRemaining > 0f) return;
+        if (!TargetInHitbox()) return;
 
-        Debug.Log($"[EnemyCombat] {name} swung at {((MonoBehaviour)target).name} for {damage}");
-        target.TakeDamage(damage);
+        StartAttack();
+    }
+
+    private void StartAttack()
+    {
+        isAttacking = true;
+        attackElapsed = 0f;
         cooldownRemaining = attackCooldown;
+        if (animator != null) animator.SetTrigger(AttackHash);
     }
 
-    private void DiagnosticLog()
+    // Called from the attack animation's Animation Event at the swing frame.
+    public void DealDamage()
     {
-        GameObject player = GameObject.FindGameObjectWithTag(playerTag);
-        if (player == null)
+        Collider[] hits = OverlapHitVolume();
+        foreach (Collider hit in hits)
         {
-            Debug.LogWarning($"[EnemyCombat] {name}: no GameObject tagged '{playerTag}' in scene.");
-            return;
+            if (!hit.CompareTag(playerTag) && !hit.CompareTag(companionTag)) continue;
+            IDamageable damageable = hit.GetComponent<IDamageable>();
+            damageable?.TakeDamage(damage);
         }
-        float d = Vector3.Distance(transform.position, player.transform.position);
-        bool hasDmg = player.GetComponent<IDamageable>() != null;
-        Debug.Log($"[EnemyCombat] {name}: player dist={d:F2}, attackRange={attackRange}, inRange={d <= attackRange}, hasIDamageable={hasDmg}");
     }
 
-    private IDamageable FindTargetInRange()
+    // Called from an Animation Event near the end of the attack clip.
+    public void EndAttack()
     {
-        IDamageable best = null;
-        float bestDist = attackRange;
-
-        GameObject player = GameObject.FindGameObjectWithTag(playerTag);
-        if (player != null)
-            TryConsider(player, ref best, ref bestDist);
-
-        GameObject[] companions = GameObject.FindGameObjectsWithTag(companionTag);
-        for (int i = 0; i < companions.Length; i++)
-            TryConsider(companions[i], ref best, ref bestDist);
-
-        return best;
+        isAttacking = false;
     }
 
-    private void TryConsider(GameObject candidate, ref IDamageable best, ref float bestDist)
+    private bool TargetInHitbox()
     {
-        float d = Vector3.Distance(transform.position, candidate.transform.position);
-        if (d > bestDist) return;
-
-        IDamageable dmg = candidate.GetComponent<IDamageable>();
-        if (dmg == null) return;
-
-        best = dmg;
-        bestDist = d;
+        Collider[] hits = OverlapHitVolume();
+        for (int i = 0; i < hits.Length; i++)
+        {
+            if (hits[i].CompareTag(playerTag) || hits[i].CompareTag(companionTag))
+                return true;
+        }
+        return false;
     }
 
-    void OnDrawGizmos()
+    private Collider[] OverlapHitVolume()
     {
-        Gizmos.color = new Color(1f, 0f, 0f, 0.15f);
-        Gizmos.DrawSphere(transform.position, attackRange);
+        Vector3 hitOrigin = HitOrigin();
+        Vector3 halfHeight = Vector3.up * (attackHeight * 0.5f);
+        return Physics.OverlapCapsule(hitOrigin - halfHeight, hitOrigin + halfHeight, attackRange);
+    }
+
+    private Vector3 HitOrigin()
+    {
+        return transform.position + transform.forward * hitForwardOffset + Vector3.up * hitVerticalOffset;
+    }
+
+    void OnDrawGizmosSelected()
+    {
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Vector3 hitOrigin = HitOrigin();
+        Vector3 halfHeight = Vector3.up * (attackHeight * 0.5f);
+        Gizmos.DrawWireSphere(hitOrigin - halfHeight, attackRange);
+        if (attackHeight > 0f)
+            Gizmos.DrawWireSphere(hitOrigin + halfHeight, attackRange);
     }
 }

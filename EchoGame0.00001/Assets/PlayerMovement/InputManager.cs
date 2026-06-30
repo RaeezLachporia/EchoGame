@@ -5,6 +5,7 @@ public class InputManager : MonoBehaviour
 {
    private PlayerControls playerControls;
    AnimatorManager animatorManager;
+   PlayerLocomotion playerLocomotion;
    
    public Vector2 movementInput;
    public Vector2 cameraInput;
@@ -23,6 +24,7 @@ public class InputManager : MonoBehaviour
    private void Awake()
    {
       animatorManager = GetComponent<AnimatorManager>();
+      playerLocomotion = GetComponent<PlayerLocomotion>();
    }
    private void OnEnable()
    {
@@ -37,8 +39,10 @@ public class InputManager : MonoBehaviour
          playerControls.PlayerMovement.Camera.canceled += i => cameraInput = Vector2.zero;
          playerControls.PlayerMovement.Sprint.performed += i => isSprinting = true;
          playerControls.PlayerMovement.Sprint.canceled  += i => isSprinting = false;
-         playerControls.PlayerMovement.Jump.performed   += i => jumpInput = true;
-         playerControls.PlayerMovement.Dodge.performed   += i => dodgeInput = true;
+         // Only accept jump/dodge presses when grounded — otherwise a press in
+         // the air would buffer until the next FixedUpdate and fire on landing.
+         playerControls.PlayerMovement.Jump.performed   += i => { if (playerLocomotion.isGrounded) jumpInput = true; };
+         playerControls.PlayerMovement.Dodge.performed  += i => { if (playerLocomotion.isGrounded) dodgeInput = true; };
          playerControls.PlayerMovement.Attack.performed  += i => attackInput = true;
       }
 
