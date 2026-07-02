@@ -25,6 +25,7 @@ public class ComapnionBehaviour : MonoBehaviour
 
     private NavMeshAgent agent;
     private BasicPlayerFollowScript follow;
+    private CompanionCommand command;
     private Rigidbody playerRb;
     private float playerStillTime;
     private float nextWanderTime;
@@ -33,6 +34,7 @@ public class ComapnionBehaviour : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         follow = GetComponent<BasicPlayerFollowScript>();
+        command = GetComponent<CompanionCommand>();
     }
 
     void Start()
@@ -48,6 +50,15 @@ public class ComapnionBehaviour : MonoBehaviour
     void Update()
     {
         if (player == null) return;
+
+        // Attack command takes precedence over wandering — otherwise we'd fight
+        // CompanionCommand for the agent destination while the companion is trying
+        // to charge an enemy.
+        if (command != null && command.HasActiveCommand)
+        {
+            playerStillTime = 0f;
+            return;
+        }
 
         // Follow script is in charge while the player is moving away — back off.
         if (follow != null && follow.IsFollowing)

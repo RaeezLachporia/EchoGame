@@ -52,6 +52,7 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
     private NavMeshAgent agent;
     private InputManager playerInput;
+    private CompanionCommand command;
     private bool isFollowing = false;
     private bool isJumping = false;
 
@@ -76,6 +77,7 @@ public class BasicPlayerFollowScript : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         agent.updateRotation = false;
         agent.autoTraverseOffMeshLink = false;
+        command = GetComponent<CompanionCommand>();
 
         if (animator == null)
             animator = GetComponent<Animator>();
@@ -112,6 +114,16 @@ public class BasicPlayerFollowScript : MonoBehaviour
         if (player == null) return;
 
         if (isJumping) return;
+
+        // CompanionCommand owns the agent while a player-issued attack command is
+        // active. Bailing here (and clearing isFollowing) stops us from calling
+        // SetDestination toward the player every frame and yanking the companion
+        // away from the target.
+        if (command != null && command.HasActiveCommand)
+        {
+            isFollowing = false;
+            return;
+        }
 
         if (agent.isOnOffMeshLink)
         {
