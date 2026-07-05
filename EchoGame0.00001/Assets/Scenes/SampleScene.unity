@@ -688,13 +688,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CommandWheel
   aim: {fileID: 1053582033}
   lockOn: {fileID: 0}
+  crosshair: {fileID: 0}
   wheelImage: {fileID: 734512576}
+  companion1: {fileID: 764257489}
+  companion2: {fileID: 1594009008}
   idleSprite: {fileID: 21300000, guid: ef1c82498a6dea2449a99523ba8f6eaf, type: 3}
   companion1HighlightedSprite: {fileID: 21300000, guid: 3a6755855257c844681a59f3bec17042, type: 3}
   companion2HighlightedSprite: {fileID: 21300000, guid: f489c7f57f508f646ba3238e69f034a4, type: 3}
   companion1WheelSprite: {fileID: 21300000, guid: b1eb2bae4cef3454e966b7504457eee2, type: 3}
   companion2WheelSprite: {fileID: 21300000, guid: b1eb2bae4cef3454e966b7504457eee2, type: 3}
-  highlightHoldTime: 0.18
+  attackHighlightedSprite: {fileID: 21300000, guid: b7eaf8fad8b42a34e916d670c28d80db, type: 3}
+  companionHighlightHoldTime: 0.18
+  attackHighlightHoldTime: 0.18
+  logDispatch: 1
 --- !u!1 &734512574
 GameObject:
   m_ObjectHideFlags: 0
@@ -841,6 +847,54 @@ MonoBehaviour:
   wanderSpeed: 1.2
   arriveTolerance: 0.25
   player: {fileID: 1053582027}
+--- !u!114 &764257489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764257478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68e913b2964b2ae4283926ada8d840ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionCommand
+  attackRange: 1.8
+  chaseSpeed: 6
+  rotationSpeed: 10
+  attackCooldown: 1.5
+  maxAttackDuration: 1.5
+  damage: 15
+  attacksPerCommand: 1
+  animator: {fileID: 764257490}
+  animationDampTime: 0.1
+  chaseAnimSpeed: 6
+  attackTrigger: Attack
+  attackBox: {fileID: 764257497}
+  logAttack: 1
+--- !u!95 &764257490 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 7676229215535578709, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+  m_PrefabInstance: {fileID: 4198796551253657050}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &764257497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764257478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab24eee71464a64baec54eea1fcf3e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionAttackBox
+  attackRange: 0.6
+  hitForwardOffset: 0.68
+  hitVerticalOffset: -0.1
+  attackHeight: 0.75
+  enemyTag: Enemy
+  gizmoColor: {r: 1, g: 0.12164397, b: 0, a: 0.8}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -2545,6 +2599,54 @@ MonoBehaviour:
   wanderSpeed: 1.2
   arriveTolerance: 0.25
   player: {fileID: 1053582027}
+--- !u!114 &1594009008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1594008997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68e913b2964b2ae4283926ada8d840ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionCommand
+  attackRange: 1.8
+  chaseSpeed: 6
+  rotationSpeed: 10
+  attackCooldown: 1.5
+  maxAttackDuration: 1.5
+  damage: 15
+  attacksPerCommand: 3
+  animator: {fileID: 1594009009}
+  animationDampTime: 0.1
+  chaseAnimSpeed: 6
+  attackTrigger: Attack
+  attackBox: {fileID: 0}
+  logAttack: 0
+--- !u!95 &1594009009 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 7676229215535578709, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+  m_PrefabInstance: {fileID: 1907389498}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1594009016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1594008997}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab24eee71464a64baec54eea1fcf3e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionAttackBox
+  attackRange: 1.08
+  hitForwardOffset: 1.26
+  hitVerticalOffset: 0.07
+  attackHeight: 0.3
+  enemyTag: Enemy
+  gizmoColor: {r: 0.3773585, g: 0.038806263, b: 0, a: 0.8}
 --- !u!1 &1594115490
 GameObject:
   m_ObjectHideFlags: 0
@@ -2825,6 +2927,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1594009007}
+    - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1594009008}
+    - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1594009016}
   m_SourcePrefab: {fileID: 100100000, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
 --- !u!1001 &1319964660998180552
 PrefabInstance:
@@ -2997,6 +3105,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
       insertIndex: -1
       addedObject: {fileID: 764257488}
+    - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 764257489}
+    - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 764257497}
   m_SourcePrefab: {fileID: 100100000, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
 --- !u!1001 &4330153474860741352
 PrefabInstance:
@@ -3049,6 +3163,10 @@ PrefabInstance:
     - target: {fileID: 6098347863301187141, guid: f61d8052cf4577a47bf3add43dc55fcb, type: 3}
       propertyPath: m_Name
       value: Enemytest
+      objectReference: {fileID: 0}
+    - target: {fileID: 6098347863301187141, guid: f61d8052cf4577a47bf3add43dc55fcb, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
       objectReference: {fileID: 0}
     - target: {fileID: 8819190249544237678, guid: f61d8052cf4577a47bf3add43dc55fcb, type: 3}
       propertyPath: m_AnchorMax.x

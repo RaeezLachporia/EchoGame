@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Comapnion
   - neutralTag
+  - Enemy
   layers:
   - Default
   - TransparentFX
