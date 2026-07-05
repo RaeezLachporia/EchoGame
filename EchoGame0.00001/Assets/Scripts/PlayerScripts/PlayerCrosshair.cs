@@ -19,6 +19,8 @@ public class PlayerCrosshair : MonoBehaviour
     [SerializeField] private float aimRange = 60f;
     [Tooltip("Layers that count as valid lock-on targets. Set to EnemyLayer.")]
     [SerializeField] private LayerMask enemyMask;
+    [Tooltip("World-space radius swept out from the crosshair ray. Larger = more forgiving aim assist. 0 falls back to a hard raycast.")]
+    [SerializeField, Min(0f)] private float assistRadius = 1.5f;
 
     private Camera cam;
     private RectTransform reticleRect;
@@ -29,6 +31,11 @@ public class PlayerCrosshair : MonoBehaviour
     // target the player sees highlighted, instead of running a second raycast.
     public bool IsOverEnemy { get; private set; }
     public Transform CurrentEnemy { get; private set; }
+
+    // When set, forces CurrentEnemy to this transform regardless of where the
+    // crosshair points. PlayerLockOn writes this so lock-on drives the same
+    // highlight/command-target pipeline as free-aim.
+    public Transform LockOverride { get; set; }
 
     void Awake()
     {
@@ -52,7 +59,12 @@ public class PlayerCrosshair : MonoBehaviour
             if (cam == null) return;
         }
 
-        CurrentEnemy = Raycast();
+        // Auto-clear a lock override that died or got disabled — otherwise the
+        // crosshair would keep pointing at a corpse.
+        if (LockOverride != null && !LockOverride.gameObject.activeInHierarchy)
+            LockOverride = null;
+
+        CurrentEnemy = LockOverride != null ? LockOverride : Raycast();
         IsOverEnemy = CurrentEnemy != null;
 
         if (reticle == null) return;
@@ -76,8 +88,39 @@ public class PlayerCrosshair : MonoBehaviour
     {
         Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
         Ray ray = cam.ScreenPointToRay(screenCenter);
-        if (Physics.Raycast(ray, out RaycastHit hit, aimRange, enemyMask, QueryTriggerInteraction.Ignore))
-            return hit.transform;
-        return null;
+
+        // Hard raycast first — a direct hit always wins over anything the assist
+        // sphere finds, so the player can still cleanly pick between overlapping
+        // enemies by pointing precisely.
+        if (Physics.Raycast(ray, out RaycastHit direct, aimRange, enemyMask, QueryTriggerInteraction.Ignore))
+            return direct.transform;
+
+        if (assistRadius <= 0f) return null;
+
+        RaycastHit[] hits = Physics.SphereCastAll(ray, assistRadius, aimRange, enemyMask, QueryTriggerInteraction.Ignore);
+        if (hits.Length == 0) return null;
+
+        // Among enemies inside the assist sphere, pick the one closest to the
+        // crosshair in screen space — matches the visual expectation of "the
+        // one my reticle is nearest to" better than closest-by-world-distance.
+        Transform best = null;
+        float bestScore = float.MaxValue;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Transform t = hits[i].transform;
+            if (t == null) continue;
+            Vector3 vp = cam.WorldToViewportPoint(t.position);
+            if (vp.z <= 0f) continue;
+
+            float dx = vp.x - 0.5f;
+            float dy = vp.y - 0.5f;
+            float score = dx * dx + dy * dy;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = t;
+            }
+        }
+        return best;
     }
 }

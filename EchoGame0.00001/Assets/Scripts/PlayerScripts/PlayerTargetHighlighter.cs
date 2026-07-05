@@ -41,10 +41,13 @@ public class PlayerTargetHighlighter : MonoBehaviour
 
         // No aim button held → no highlight. Also covers the "no PlayerAimZoom
         // attached" case when requireAim is on: aim ref is null, treated as "not aiming".
+        // Lock-on bypasses the aim gate — the whole point of a lock is to keep the
+        // target framed and highlighted whether the player is aiming or not.
         bool aimActive = !requireAim || (aim != null && aim.IsAiming);
+        bool locked = crosshair.LockOverride != null;
 
         EnemyHighlight desired = null;
-        if (aimActive && crosshair.CurrentEnemy != null)
+        if ((aimActive || locked) && crosshair.CurrentEnemy != null)
         {
             // Raycast can land on a child collider (hitbox, weapon, mesh) — the
             // EnemyHighlight component lives on the enemy's root. Walk up until
