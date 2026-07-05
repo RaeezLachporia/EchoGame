@@ -4,30 +4,29 @@ using UnityEngine.InputSystem;
 public class PlayerAimZoom : MonoBehaviour
 {
     [Header("Zoom")]
-    [Tooltip("Field of view while not aiming. Auto-populated from the camera on Start if left at default.")]
+    [Tooltip("FOV while not aiming. Grabbed from the camera on Start if left default.")]
     [SerializeField] private float defaultFov = 60f;
-    [Tooltip("Field of view while aim is held. Lower = tighter zoom.")]
+    [Tooltip("FOV while aiming. Lower = tighter zoom.")]
     [SerializeField] private float aimFov = 35f;
-    [Tooltip("How fast the FOV blends between default and aim (units per second of the 0..1 blend).")]
+    [Tooltip("FOV blend speed.")]
     [SerializeField] private float zoomSpeed = 8f;
 
     [Header("References")]
-    [Tooltip("Camera whose FOV is driven. Falls back to Camera.main.")]
+    [Tooltip("Camera to zoom. Falls back to Camera.main.")]
     [SerializeField] private Camera aimCamera;
-    [Tooltip("CanvasGroup wrapping the crosshair — its alpha is driven by the aim blend.")]
+    [Tooltip("CanvasGroup on the crosshair — alpha follows the aim blend.")]
     [SerializeField] private CanvasGroup reticleGroup;
 
     [Header("Reticle Opacity")]
-    [Tooltip("Crosshair alpha while the player is NOT holding aim.")]
+    [Tooltip("Reticle alpha when not aiming.")]
     [SerializeField, Range(0f, 1f)] private float restAlpha = 0.15f;
-    [Tooltip("Crosshair alpha while aim is fully held.")]
+    [Tooltip("Reticle alpha when fully aiming.")]
     [SerializeField, Range(0f, 1f)] private float aimAlpha = 1f;
 
     private InputAction aimAction;
 
-    // 0 = not aiming, 1 = fully aimed. Other scripts (PlayerCrosshair) can read
-    // this to drive their own visuals off the same blend, so opacity and FOV
-    // stay perfectly in sync.
+    // 0 = not aiming, 1 = fully aimed. Other scripts (PlayerCrosshair) piggyback
+    // on this so their visuals stay in sync with the FOV blend.
     public float AimBlend { get; private set; }
     public bool IsAiming => aimAction != null && aimAction.IsPressed();
 
@@ -35,8 +34,8 @@ public class PlayerAimZoom : MonoBehaviour
     {
         aimAction = new InputAction("Aim", InputActionType.Button);
         aimAction.AddBinding("<Gamepad>/leftTrigger");
-        // Left Alt is the "aim/focus" convention on KBM in third-person games —
-        // avoids colliding with attack (LMB) and companion command (RMB).
+        // Left Alt is the third-person "aim/focus" convention on KBM — doesn't
+        // collide with attack (LMB) or companion command (RMB).
         aimAction.AddBinding("<Keyboard>/leftAlt");
     }
 

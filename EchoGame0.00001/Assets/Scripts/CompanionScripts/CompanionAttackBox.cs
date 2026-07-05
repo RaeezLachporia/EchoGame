@@ -1,29 +1,29 @@
 using UnityEngine;
 
-// Per-companion hit volume — different companions get different reach, height,
-// or offset. Kept separate from CompanionCommand so we can swap the box shape
-// on a prefab without touching the attack orchestration (chase / cooldown / anim).
+// Per-companion hit volume. Different companions want different reach and shape,
+// so keeping the box separate from CompanionCommand lets us tweak it per prefab
+// without touching the attack orchestration (chase / cooldown / anim).
 public class CompanionAttackBox : MonoBehaviour
 {
     [Header("Hit Volume")]
-    [Tooltip("Radius of the overlap capsule / sphere used to find things to damage on a swing.")]
+    [Tooltip("Overlap radius of the swing.")]
     [SerializeField] private float attackRange = 1.5f;
-    [Tooltip("How far in front of the companion the hit volume is centered.")]
+    [Tooltip("How far in front of the companion the hit volume sits.")]
     [SerializeField] private float hitForwardOffset = 0.8f;
-    [Tooltip("Vertical offset of the hit volume from the companion's origin.")]
+    [Tooltip("Vertical offset from the companion's origin.")]
     [SerializeField] private float hitVerticalOffset = 0.5f;
-    [Tooltip("Vertical extent of the hit volume (capsule height). 0 = plain sphere of radius attackRange.")]
+    [Tooltip("Capsule height of the hit volume. 0 = plain sphere.")]
     [SerializeField] private float attackHeight = 0f;
 
     [Header("Targeting")]
-    [Tooltip("Colliders with this tag are the only ones the swing damages. Default 'Enemy'.")]
+    [Tooltip("Only colliders with this tag take damage.")]
     [SerializeField] private string enemyTag = "Enemy";
 
     [Header("Debug")]
     [SerializeField] private Color gizmoColor = new Color(0.2f, 1f, 0.4f, 0.8f);
 
-    // Called by CompanionCommand from its DealDamage animation event. Returns
-    // the number of enemies that took damage so the caller can log / react.
+    // Called by CompanionCommand's DealDamage animation event. Returns how many
+    // enemies got hit so the caller can log / react.
     public int TryDealDamage(float damage)
     {
         Collider[] hits = OverlapHitVolume();
@@ -31,8 +31,8 @@ public class CompanionAttackBox : MonoBehaviour
         for (int i = 0; i < hits.Length; i++)
         {
             if (!hits[i].CompareTag(enemyTag)) continue;
-            // GetComponentInParent so child colliders (weapon meshes, hitboxes)
-            // still resolve back to the enemy root that holds the health.
+            // GetComponentInParent so weapon meshes / child hitboxes still resolve
+            // up to the enemy root that owns the health.
             IDamageable damageable = hits[i].GetComponentInParent<IDamageable>();
             if (damageable == null) continue;
             damageable.TakeDamage(damage);

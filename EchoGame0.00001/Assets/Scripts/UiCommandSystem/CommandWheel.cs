@@ -13,41 +13,41 @@ public class CommandWheel : MonoBehaviour
     }
 
     [Header("References")]
-    [Tooltip("Aim script driving the aim-hold. D-pad selection is accepted while this reports IsAiming. Auto-found if left empty.")]
+    [Tooltip("Aim script — d-pad selection works while this reports IsAiming. Auto-found if empty.")]
     [SerializeField] private PlayerAimZoom aim;
-    [Tooltip("Lock-on script. While a target is locked, the wheel accepts d-pad input without needing aim held. Auto-found if left empty.")]
+    [Tooltip("Lock-on script — d-pad also works while a lock is active. Auto-found if empty.")]
     [SerializeField] private PlayerLockOn lockOn;
-    [Tooltip("Source of the currently-targeted enemy. Its CurrentEnemy is who ATTACK will send the selected companion at. Auto-found if left empty.")]
+    [Tooltip("Where ATTACK gets its target from. Auto-found if empty.")]
     [SerializeField] private PlayerCrosshair crosshair;
-    [Tooltip("UI Image whose sprite is swapped between wheel states. Usually the root wheel image on the HUD canvas.")]
+    [Tooltip("The wheel image we swap sprites on.")]
     [SerializeField] private Image wheelImage;
 
     [Header("Companions")]
-    [Tooltip("Companion linked to the TOP slice of the main wheel (d-pad up). Leave empty if you don't have this companion in the scene yet.")]
+    [Tooltip("Companion for the TOP slice (d-pad up).")]
     [SerializeField] private CompanionCommand companion1;
-    [Tooltip("Companion linked to the RIGHT slice of the main wheel (d-pad right).")]
+    [Tooltip("Companion for the RIGHT slice (d-pad right).")]
     [SerializeField] private CompanionCommand companion2;
 
     [Header("Sprites — Main Wheel")]
-    [Tooltip("Default main wheel — the 4 numbered COMPANION slices.")]
+    [Tooltip("Default main wheel (4 numbered companion slices).")]
     [SerializeField] private Sprite idleSprite;
-    [Tooltip("Main wheel with the top (companion 1) slice highlighted.")]
+    [Tooltip("Main wheel with the TOP slice highlighted.")]
     [SerializeField] private Sprite companion1HighlightedSprite;
-    [Tooltip("Main wheel with the right (companion 2) slice highlighted.")]
+    [Tooltip("Main wheel with the RIGHT slice highlighted.")]
     [SerializeField] private Sprite companion2HighlightedSprite;
 
     [Header("Sprites — Companion Wheel")]
-    [Tooltip("Command wheel shown after companion 1 is picked (ATTACK + EMPTY slots).")]
+    [Tooltip("Companion 1's command wheel.")]
     [SerializeField] private Sprite companion1WheelSprite;
-    [Tooltip("Command wheel shown after companion 2 is picked. Falls back to companion 1's wheel sprite if empty.")]
+    [Tooltip("Companion 2's command wheel. Falls back to companion 1's if empty.")]
     [SerializeField] private Sprite companion2WheelSprite;
-    [Tooltip("Companion wheel with the ATTACK slice highlighted, shown briefly on dispatch.")]
+    [Tooltip("Companion wheel with ATTACK highlighted.")]
     [SerializeField] private Sprite attackHighlightedSprite;
 
     [Header("Timing")]
-    [Tooltip("How long the highlighted-companion sprite is shown before switching to that companion's command wheel.")]
+    [Tooltip("How long the highlight sprite shows before the companion wheel takes over.")]
     [SerializeField, Min(0f)] private float companionHighlightHoldTime = 0.18f;
-    [Tooltip("How long the highlighted-attack sprite is shown after dispatch before the wheel returns to the main wheel.")]
+    [Tooltip("How long the ATTACK highlight shows before returning to the main wheel.")]
     [SerializeField, Min(0f)] private float attackHighlightHoldTime = 0.18f;
 
     [Header("Debug")]
@@ -62,8 +62,7 @@ public class CommandWheel : MonoBehaviour
 
     void Awake()
     {
-        // Bound in code (not in PlayerControls.inputactions) so the wheel is
-        // self-contained and doesn't force a regen of the input asset.
+        // Binding here in code so tweaking the wheel doesn't force a regen of the input asset.
         dpadUpAction = new InputAction("WheelUp", InputActionType.Button);
         dpadUpAction.AddBinding("<Gamepad>/dpad/up");
         dpadUpAction.AddBinding("<Keyboard>/upArrow");
@@ -100,9 +99,8 @@ public class CommandWheel : MonoBehaviour
 
     void Update()
     {
-        // Wheel is "engaged" while the player is aiming OR locked on to a target.
-        // When they let go of both, revert to idle so the base wheel (and its
-        // cooldown animations) is always what the player sees.
+        // Not aiming and not locked → drop back to idle so the player always sees
+        // the base wheel (and its cooldowns) when disengaged.
         if (!IsWheelEngaged() && state != WheelState.Idle)
         {
             SetState(WheelState.Idle);
@@ -133,7 +131,7 @@ public class CommandWheel : MonoBehaviour
         }
         else if (state == WheelState.CompanionWheel)
         {
-            // Top slice on the companion wheel is ATTACK.
+            // Top slice is ATTACK.
             TryDispatchAttack();
         }
     }
@@ -146,7 +144,7 @@ public class CommandWheel : MonoBehaviour
         {
             SelectCompanion(2);
         }
-        // Right / down / left slices on the companion wheel are EMPTY for now.
+        // Right/down/left slices are EMPTY on the companion wheel for now.
     }
 
     private bool IsWheelEngaged()

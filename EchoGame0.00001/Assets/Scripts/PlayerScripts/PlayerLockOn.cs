@@ -1,28 +1,28 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// Runs after CameraManager (default order 0) so we override the free-look
-// rotation with the lock-on framing on the same frame it was written.
+// Runs after CameraManager so we can overwrite the free-look rotation with the
+// lock framing on the same frame.
 [DefaultExecutionOrder(200)]
 public class PlayerLockOn : MonoBehaviour
 {
     [Header("Range")]
-    [Tooltip("Max distance from the player when acquiring a lock target.")]
+    [Tooltip("Max distance to grab a lock.")]
     [SerializeField] private float lockRange = 25f;
-    [Tooltip("Lock breaks if the target drifts beyond this distance. Slightly larger than lockRange so grazing edges don't ping-pong the lock.")]
+    [Tooltip("Lock drops if the target gets past this. Kept slightly bigger than Lock Range so edges don't flap.")]
     [SerializeField] private float breakRange = 30f;
 
     [Header("Framing")]
-    [Tooltip("Camera pitch clamps while locked on. Match CameraManager's free-look clamps unless you want the lock to tilt further.")]
+    [Tooltip("Pitch clamps while locked on. Match CameraManager's free-look clamps.")]
     [SerializeField] private float minPivotAngle = -35f;
     [SerializeField] private float maxPivotAngle = 35f;
-    [Tooltip("World-space vertical offset added to the target position when framing — usually raises the pivot from the enemy's feet to their torso.")]
+    [Tooltip("Raises the framing point up the enemy (feet → torso).")]
     [SerializeField] private float verticalTargetOffset = 1.2f;
 
     [Header("References")]
-    [Tooltip("Camera rig. Auto-found if left empty.")]
+    [Tooltip("Camera rig. Auto-found if empty.")]
     [SerializeField] private CameraManager cameraManager;
-    [Tooltip("Crosshair — its LockOverride is set to the locked target so the same red highlight and companion-command pipeline see it. Auto-found if left empty.")]
+    [Tooltip("Crosshair — set as LockOverride so the red highlight and command pipeline follow the lock. Auto-found if empty.")]
     [SerializeField] private PlayerCrosshair crosshair;
 
     private InputAction lockAction;
@@ -33,7 +33,7 @@ public class PlayerLockOn : MonoBehaviour
 
     void Awake()
     {
-        // Bound in code so this doesn't force a regen of PlayerControls.inputactions.
+        // Bind in code so this doesn't force a regen of the input asset.
         lockAction = new InputAction("LockOn", InputActionType.Button);
         lockAction.AddBinding("<Gamepad>/rightStickPress");
         lockAction.AddBinding("<Mouse>/middleButton");
@@ -52,8 +52,8 @@ public class PlayerLockOn : MonoBehaviour
     {
         lockAction.performed -= OnLockPressed;
         lockAction.Disable();
-        // Drop the highlight override if the component gets disabled mid-lock —
-        // don't leave the crosshair stuck on an enemy the player can't unlock from.
+        // If we're disabled mid-lock, drop the highlight — otherwise the crosshair
+        // stays stuck on an enemy the player can't unlock from.
         Disengage();
     }
 
@@ -70,8 +70,8 @@ public class PlayerLockOn : MonoBehaviour
 
     private Transform FindNearestEnemy()
     {
-        // Small enemy counts and one call per press → cheap. If enemy counts grow
-        // we can swap this for an OverlapSphere or a registry.
+        // One call per button press and enemy counts are small — this is cheap.
+        // Swap to OverlapSphere or a registry if that changes.
         EnemyHighlight[] enemies = FindObjectsOfType<EnemyHighlight>();
         Transform best = null;
         float bestSqr = lockRange * lockRange;
@@ -105,7 +105,7 @@ public class PlayerLockOn : MonoBehaviour
     {
         if (locked == null) return;
 
-        // Target died, was disabled, or drifted out of the break radius.
+        // Target died, disabled, or drifted too far — drop the lock.
         if (!locked.gameObject.activeInHierarchy ||
             (locked.position - transform.position).sqrMagnitude > breakRange * breakRange)
         {
@@ -128,17 +128,17 @@ public class PlayerLockOn : MonoBehaviour
 
         float yaw = e.y;
         float pitch = e.x;
-        // eulerAngles returns 0..360 — bring the pitch into -180..180 so the clamp works.
+        // eulerAngles is 0..360; bring pitch into -180..180 or the clamp won't work.
         if (pitch > 180f) pitch -= 360f;
         pitch = Mathf.Clamp(pitch, minPivotAngle, maxPivotAngle);
 
-        // Write back to CameraManager so free-look resumes from this framing when
-        // the player disengages, instead of snapping back to a stale angle.
+        // Push angles back so free-look picks up where the lock left off instead
+        // of snapping to a stale angle when disengaged.
         cameraManager.lookAngle = yaw;
         cameraManager.pivotAngle = pitch;
 
-        // Apply this frame — CameraManager already set rotations from stick input
-        // earlier in the frame; we overwrite so the render sees the locked framing.
+        // CameraManager already rotated from stick input earlier this frame — overwrite
+        // now so the render sees the lock framing.
         cameraManager.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         if (cameraManager.cameraPivot != null)
             cameraManager.cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
