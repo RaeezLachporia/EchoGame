@@ -99,6 +99,9 @@ public class CompanionCommand : MonoBehaviour
             // Freeze the agent while swinging so we don't slide through the enemy
             // mid-animation.
             if (agent.isOnNavMesh && agent.hasPath) agent.ResetPath();
+            // Keep rotating toward the enemy during the swing so the hitbox tracks
+            // them if they sidestep mid-animation.
+            FaceTarget();
             if (attackElapsed >= maxAttackDuration)
             {
                 IsAttacking = false;
@@ -134,13 +137,18 @@ public class CompanionCommand : MonoBehaviour
             if (cooldownRemaining <= 0f) StartAttack();
         }
 
-        if (toEnemy.sqrMagnitude > 0.0001f)
-        {
-            Quaternion look = Quaternion.LookRotation(toEnemy.normalized);
-            transform.rotation = Quaternion.Slerp(transform.rotation, look, rotationSpeed * Time.deltaTime);
-        }
-
+        FaceTarget();
         UpdateAnimation();
+    }
+
+    private void FaceTarget()
+    {
+        if (targetEnemy == null) return;
+        Vector3 toEnemy = targetEnemy.position - transform.position;
+        toEnemy.y = 0f;
+        if (toEnemy.sqrMagnitude < 0.0001f) return;
+        Quaternion look = Quaternion.LookRotation(toEnemy.normalized);
+        transform.rotation = Quaternion.Slerp(transform.rotation, look, rotationSpeed * Time.deltaTime);
     }
 
     private void StartAttack()
