@@ -1424,6 +1424,8 @@ MonoBehaviour:
   reticleGroup: {fileID: 1170389144}
   restAlpha: 0.15
   aimAlpha: 1
+  reticleRect: {fileID: 1170389141}
+  aimOffset: {x: 70, y: -20}
 --- !u!114 &1053582034
 MonoBehaviour:
   m_ObjectHideFlags: 0

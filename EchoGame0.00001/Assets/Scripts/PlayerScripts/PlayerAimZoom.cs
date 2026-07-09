@@ -23,7 +23,15 @@ public class PlayerAimZoom : MonoBehaviour
     [Tooltip("Reticle alpha when fully aiming.")]
     [SerializeField, Range(0f, 1f)] private float aimAlpha = 1f;
 
+    [Header("Reticle Offset")]
+    [Tooltip("RectTransform to shift when aiming. If left null, falls back to the reticleGroup's transform.")]
+    [SerializeField] private RectTransform reticleRect;
+    [Tooltip("Pixel offset applied to the reticle at full aim. X = right, Y = up.")]
+    [SerializeField] private Vector2 aimOffset = new Vector2(60f, -20f);
+
     private InputAction aimAction;
+    private Vector3 reticleBaseLocalPos;
+    private bool reticleResolved;
 
     // 0 = not aiming, 1 = fully aimed. Other scripts (PlayerCrosshair) piggyback
     // on this so their visuals stay in sync with the FOV blend.
@@ -46,6 +54,19 @@ public class PlayerAimZoom : MonoBehaviour
     {
         if (aimCamera == null) aimCamera = Camera.main;
         if (aimCamera != null) defaultFov = aimCamera.fieldOfView;
+
+        if (reticleRect == null && reticleGroup != null)
+            reticleRect = reticleGroup.transform as RectTransform;
+
+        if (reticleRect != null)
+        {
+            reticleBaseLocalPos = reticleRect.localPosition;
+            reticleResolved = true;
+        }
+        else
+        {
+            Debug.LogWarning("PlayerAimZoom: no reticleRect assigned and reticleGroup has no RectTransform — aim offset disabled.", this);
+        }
     }
 
     void Update()
@@ -58,5 +79,11 @@ public class PlayerAimZoom : MonoBehaviour
 
         if (reticleGroup != null)
             reticleGroup.alpha = Mathf.Lerp(restAlpha, aimAlpha, AimBlend);
+
+        if (reticleResolved)
+        {
+            Vector3 shift = new Vector3(aimOffset.x, aimOffset.y, 0f) * AimBlend;
+            reticleRect.localPosition = reticleBaseLocalPos + shift;
+        }
     }
 }
