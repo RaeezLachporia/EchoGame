@@ -6,6 +6,9 @@ public class CompanionHealthHud : MonoBehaviour
 
     [SerializeField] private HealthBarUi[] slots = new HealthBarUi[4];
 
+    [Tooltip("Optional. When set, companions use the bar matching their position in this list — first in the list gets the top bar. Leave empty for first-come-first-served.")]
+    [SerializeField] private CompanionDatabase database;
+
     private readonly Object[] occupants = new Object[4];
 
     void Awake()
@@ -35,35 +38,44 @@ public class CompanionHealthHud : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    public int Claim(Object owner, string displayName, float maxHealth, float currentHealth)
+    public int Claim(Object owner, string displayName, float maxHealth, float currentHealth, CompanionDefinition definition = null)
     {
         if (owner == null) return -1;
 
+        // Already has a bar? Just refresh it.
         for (int i = 0; i < slots.Length; i++)
         {
             if (occupants[i] == owner)
-            {
-                slots[i].SetName(displayName);
-                slots[i].Initialize(maxHealth, currentHealth);
-                slots[i].Show();
-                return i;
-            }
+                return Assign(i, owner, displayName, maxHealth, currentHealth);
         }
 
+        // Try the bar matching this companion's position in the database list,
+        // so the HUD order always matches the list — not whoever loaded first.
+        if (database != null && definition != null)
+        {
+            int preferred = database.allCompanions.IndexOf(definition);
+            if (preferred >= 0 && preferred < slots.Length && slots[preferred] != null && occupants[preferred] == null)
+                return Assign(preferred, owner, displayName, maxHealth, currentHealth);
+        }
+
+        // Otherwise: first free bar.
         for (int i = 0; i < slots.Length; i++)
         {
             if (occupants[i] == null && slots[i] != null)
-            {
-                occupants[i] = owner;
-                slots[i].SetName(displayName);
-                slots[i].Initialize(maxHealth, currentHealth);
-                slots[i].Show();
-                return i;
-            }
+                return Assign(i, owner, displayName, maxHealth, currentHealth);
         }
 
         Debug.LogWarning("CompanionHealthHud: no free slots.");
         return -1;
+    }
+
+    private int Assign(int slot, Object owner, string displayName, float maxHealth, float currentHealth)
+    {
+        occupants[slot] = owner;
+        slots[slot].SetName(displayName);
+        slots[slot].Initialize(maxHealth, currentHealth);
+        slots[slot].Show();
+        return slot;
     }
 
     public void SetHealth(int slot, float value)

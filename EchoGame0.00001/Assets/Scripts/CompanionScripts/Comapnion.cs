@@ -4,6 +4,8 @@ using UnityEngine.AI;
 public class Comapnion : MonoBehaviour, IDamageable
 {
     [Header("Identity")]
+    [Tooltip("Drag a companion asset here (e.g. Layla). Its name and health replace the values below. Leave empty to use the values below instead.")]
+    [SerializeField] private CompanionDefinition definition;
     [SerializeField] private string displayName = "Companion";
     [SerializeField] private string playerTag = "Player";
 
@@ -28,6 +30,9 @@ public class Comapnion : MonoBehaviour, IDamageable
 
     void Awake()
     {
+        if (definition != null)
+            ApplyDefinition(definition);
+
         // Companion movement is driven by NavMeshAgent (BasicPlayerFollowScript).
         // A dynamic Rigidbody fights the agent — collisions impart velocity, the agent
         // loses its path, and the companion slides off-mesh. Kinematic lets physics
@@ -47,7 +52,34 @@ public class Comapnion : MonoBehaviour, IDamageable
     {
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
         if (CompanionHealthHud.Instance != null)
-            hudSlot = CompanionHealthHud.Instance.Claim(this, displayName, maxHealth, currentHealth);
+            hudSlot = CompanionHealthHud.Instance.Claim(this, displayName, maxHealth, currentHealth, definition);
+    }
+
+    // The spawner (coming later) calls this right after creating a companion,
+    // so it starts with the right name and health from its definition asset.
+    public void Initialize(CompanionDefinition def)
+    {
+        definition = def;
+        ApplyDefinition(def);
+    }
+
+    private void ApplyDefinition(CompanionDefinition def)
+    {
+        displayName = def.displayName;
+        maxHealth = def.maxHealth;
+        currentHealth = maxHealth;
+    }
+
+    void OnValidate()
+    {
+        // Runs in the editor whenever this component changes in the Inspector.
+        // Copies the definition's name and health into the fields above so you
+        // can see them straight away. If the game is running, it also updates
+        // the health bar HUD so you don't have to restart.
+        if (definition == null) return;
+        ApplyDefinition(definition);
+        if (Application.isPlaying && CompanionHealthHud.Instance != null)
+            hudSlot = CompanionHealthHud.Instance.Claim(this, displayName, maxHealth, currentHealth, definition);
     }
 
     void Update()
