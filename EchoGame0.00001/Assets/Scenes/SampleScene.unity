@@ -3884,7 +3884,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2453917798904842088, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
   m_PrefabInstance: {fileID: 5735871795900416429}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 8711830233340729598}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 68e913b2964b2ae4283926ada8d840ac, type: 3}
@@ -4125,7 +4125,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8711830233340729599}
   m_SourcePrefab: {fileID: 100100000, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
 --- !u!4 &6115972589266347390 stripped
 Transform:
@@ -4137,6 +4140,39 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 87117431835768757, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
   m_PrefabInstance: {fileID: 5735871795900416429}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8711830233340729598 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+  m_PrefabInstance: {fileID: 5735871795900416429}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8711830233340729599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8711830233340729598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3de13241431779e4d9825e867af0b8b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NalediHealing
+  abilityName: Heal
+  icon: {fileID: 0}
+  healThreshold: 0.7
+  healPlayer: 1
+  scanInterval: 0.5
+  healAmount: 30
+  healCooldown: 4
+  healRange: 2.5
+  castDuration: 0.8
+  moveSpeed: 4
+  rotationSpeed: 10
+  moveAnimSpeed: 4
+  animator: {fileID: 0}
+  healTrigger: Heal
+  animationDampTime: 0.1
+  logHealing: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
