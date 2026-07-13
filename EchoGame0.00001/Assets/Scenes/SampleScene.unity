@@ -4129,6 +4129,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8711830233340729599}
+    - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8711830233340729600}
   m_SourcePrefab: {fileID: 100100000, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
 --- !u!4 &6115972589266347390 stripped
 Transform:
@@ -4173,6 +4176,20 @@ MonoBehaviour:
   healTrigger: Heal
   animationDampTime: 0.1
   logHealing: 1
+--- !u!114 &8711830233340729600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8711830233340729598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7367255673d37d42b3931b0ee744e78, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AttackAbility
+  abilityName: Attack
+  icon: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

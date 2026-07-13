@@ -87,6 +87,9 @@ public class NalediHealing : CompanionAbility
         // An attack order from the player beats healing — drop everything.
         if (command != null && command.HasActiveCommand)
         {
+            // Clear a queued heal trigger too, so the heal animation doesn't
+            // sneak out later while she's off attacking.
+            if (isCasting && hasHealTrigger) animator.ResetTrigger(healTriggerHash);
             isCasting = false;
             DropTarget();
             return;

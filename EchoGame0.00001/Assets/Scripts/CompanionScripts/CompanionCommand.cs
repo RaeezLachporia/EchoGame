@@ -86,6 +86,10 @@ public class CompanionCommand : MonoBehaviour
     public void CancelCommand()
     {
         targetEnemy = null;
+        // Triggers stay switched on until a transition uses them. If one is still
+        // queued up when the command ends, the animator plays one more swing while
+        // the companion is already walking back to the player — clear it here.
+        if (animator != null) animator.ResetTrigger(attackTriggerHash);
         if (agent.isOnNavMesh && agent.hasPath) agent.ResetPath();
     }
 
