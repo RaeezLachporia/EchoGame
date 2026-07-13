@@ -27,6 +27,10 @@ public class CommandWheel : MonoBehaviour
     [SerializeField] private CompanionCommand companion1;
     [Tooltip("Companion for the RIGHT slice (d-pad right).")]
     [SerializeField] private CompanionCommand companion2;
+    [Tooltip("Companion for the BOTTOM slice (d-pad down).")]
+    [SerializeField] private CompanionCommand companion3;
+    [Tooltip("Companion for the LEFT slice (d-pad left).")]
+    [SerializeField] private CompanionCommand companion4;
 
     [Header("Sprites — Main Wheel")]
     [Tooltip("Default main wheel (4 numbered companion slices).")]
@@ -35,12 +39,20 @@ public class CommandWheel : MonoBehaviour
     [SerializeField] private Sprite companion1HighlightedSprite;
     [Tooltip("Main wheel with the RIGHT slice highlighted.")]
     [SerializeField] private Sprite companion2HighlightedSprite;
+    [Tooltip("Main wheel with the BOTTOM slice highlighted.")]
+    [SerializeField] private Sprite companion3HighlightedSprite;
+    [Tooltip("Main wheel with the LEFT slice highlighted.")]
+    [SerializeField] private Sprite companion4HighlightedSprite;
 
     [Header("Sprites — Companion Wheel")]
     [Tooltip("Companion 1's command wheel.")]
     [SerializeField] private Sprite companion1WheelSprite;
     [Tooltip("Companion 2's command wheel. Falls back to companion 1's if empty.")]
     [SerializeField] private Sprite companion2WheelSprite;
+    [Tooltip("Companion 3's command wheel. Falls back to companion 1's if empty.")]
+    [SerializeField] private Sprite companion3WheelSprite;
+    [Tooltip("Companion 4's command wheel. Falls back to companion 1's if empty.")]
+    [SerializeField] private Sprite companion4WheelSprite;
     [Tooltip("Companion wheel with ATTACK highlighted.")]
     [SerializeField] private Sprite attackHighlightedSprite;
 
@@ -55,6 +67,8 @@ public class CommandWheel : MonoBehaviour
 
     private InputAction dpadUpAction;
     private InputAction dpadRightAction;
+    private InputAction dpadDownAction;
+    private InputAction dpadLeftAction;
 
     private WheelState state = WheelState.Idle;
     private int selectedSlot; // 1 = top slice, 2 = right slice, 0 = none
@@ -71,6 +85,14 @@ public class CommandWheel : MonoBehaviour
         dpadRightAction.AddBinding("<Gamepad>/dpad/right");
         dpadRightAction.AddBinding("<Keyboard>/rightArrow");
 
+        dpadDownAction = new InputAction("WheelDown", InputActionType.Button);
+        dpadDownAction.AddBinding("<Gamepad>/dpad/down");
+        dpadDownAction.AddBinding("<Keyboard>/downArrow");
+
+        dpadLeftAction = new InputAction("WheelLeft", InputActionType.Button);
+        dpadLeftAction.AddBinding("<Gamepad>/dpad/left");
+        dpadLeftAction.AddBinding("<Keyboard>/leftArrow");
+
         if (aim == null) aim = FindObjectOfType<PlayerAimZoom>();
         if (lockOn == null) lockOn = FindObjectOfType<PlayerLockOn>();
         if (crosshair == null) crosshair = FindObjectOfType<PlayerCrosshair>();
@@ -80,16 +102,24 @@ public class CommandWheel : MonoBehaviour
     {
         dpadUpAction.performed += OnDpadUp;
         dpadRightAction.performed += OnDpadRight;
+        dpadDownAction.performed += OnDpadDown;
+        dpadLeftAction.performed += OnDpadLeft;
         dpadUpAction.Enable();
         dpadRightAction.Enable();
+        dpadDownAction.Enable();
+        dpadLeftAction.Enable();
     }
 
     void OnDisable()
     {
         dpadUpAction.performed -= OnDpadUp;
         dpadRightAction.performed -= OnDpadRight;
+        dpadDownAction.performed -= OnDpadDown;
+        dpadLeftAction.performed -= OnDpadLeft;
         dpadUpAction.Disable();
         dpadRightAction.Disable();
+        dpadDownAction.Disable();
+        dpadLeftAction.Disable();
     }
 
     void Start()
@@ -131,8 +161,8 @@ public class CommandWheel : MonoBehaviour
         }
         else if (state == WheelState.CompanionWheel)
         {
-            // Top slice is ATTACK.
-            TryDispatchAttack();
+            // Top slice = the companion's first ability (ATTACK by convention).
+            DispatchSlice(0);
         }
     }
 
@@ -144,7 +174,38 @@ public class CommandWheel : MonoBehaviour
         {
             SelectCompanion(2);
         }
-        // Right/down/left slices are EMPTY on the companion wheel for now.
+        else if (state == WheelState.CompanionWheel)
+        {
+            DispatchSlice(1);
+        }
+    }
+
+    private void OnDpadDown(InputAction.CallbackContext ctx)
+    {
+        if (!IsWheelEngaged()) return;
+
+        if (state == WheelState.Idle)
+        {
+            SelectCompanion(3);
+        }
+        else if (state == WheelState.CompanionWheel)
+        {
+            DispatchSlice(2);
+        }
+    }
+
+    private void OnDpadLeft(InputAction.CallbackContext ctx)
+    {
+        if (!IsWheelEngaged()) return;
+
+        if (state == WheelState.Idle)
+        {
+            SelectCompanion(4);
+        }
+        else if (state == WheelState.CompanionWheel)
+        {
+            DispatchSlice(3);
+        }
     }
 
     private bool IsWheelEngaged()
@@ -167,10 +228,51 @@ public class CommandWheel : MonoBehaviour
         {
             case 1: return companion1;
             case 2: return companion2;
+            case 3: return companion3;
+            case 4: return companion4;
             default: return null;
         }
     }
 
+    // Fires whichever ability sits in that slice of the selected companion's wheel.
+    // Slice numbers: 0 = TOP, 1 = RIGHT, 2 = BOTTOM, 3 = LEFT — matching the order
+    // of the ability components on the companion. Companions with no abilities
+    // still work the old way: TOP slice = attack.
+    private void DispatchSlice(int sliceIndex)
+    {
+        CompanionCommand companion = GetSelectedCompanion();
+        if (companion == null)
+        {
+            if (logDispatch) Debug.LogWarning($"[CommandWheel] Slot {selectedSlot} has no companion assigned — nothing to command.");
+            return;
+        }
+
+        CompanionAbility[] abilities = companion.GetComponents<CompanionAbility>();
+        if (abilities.Length == 0)
+        {
+            if (sliceIndex == 0) TryDispatchAttack();
+            return;
+        }
+
+        if (sliceIndex >= abilities.Length) return; // empty slice
+
+        Transform target = crosshair != null ? crosshair.CurrentEnemy : null;
+        if (abilities[sliceIndex].TryActivate(target))
+        {
+            if (logDispatch) Debug.Log($"[CommandWheel] {companion.name} → {abilities[sliceIndex].abilityName}");
+            // Every ability shows the ATTACK confirm flash for now — the new
+            // wheel UI will give each its own later.
+            stateTimer = attackHighlightHoldTime;
+            SetState(WheelState.AttackHighlighted);
+        }
+        else if (logDispatch)
+        {
+            Debug.Log($"[CommandWheel] {abilities[sliceIndex].abilityName} couldn't start (no valid target?) — ignoring.");
+        }
+    }
+
+    // The old attack path — only used for companions that don't have any
+    // ability components on their prefab yet.
     private void TryDispatchAttack()
     {
         CompanionCommand target = GetSelectedCompanion();
@@ -207,19 +309,41 @@ public class CommandWheel : MonoBehaviour
                 break;
 
             case WheelState.CompanionHighlighted:
-                SetSprite(selectedSlot == 1 ? companion1HighlightedSprite : companion2HighlightedSprite);
+                SetSprite(GetHighlightedSpriteFor(selectedSlot));
                 break;
 
             case WheelState.CompanionWheel:
-                Sprite wheel = selectedSlot == 2
-                    ? (companion2WheelSprite != null ? companion2WheelSprite : companion1WheelSprite)
-                    : companion1WheelSprite;
-                SetSprite(wheel);
+                Sprite wheel = GetCompanionWheelFor(selectedSlot);
+                SetSprite(wheel != null ? wheel : companion1WheelSprite);
                 break;
 
             case WheelState.AttackHighlighted:
                 SetSprite(attackHighlightedSprite);
                 break;
+        }
+    }
+
+    private Sprite GetHighlightedSpriteFor(int slot)
+    {
+        switch (slot)
+        {
+            case 1: return companion1HighlightedSprite;
+            case 2: return companion2HighlightedSprite;
+            case 3: return companion3HighlightedSprite;
+            case 4: return companion4HighlightedSprite;
+            default: return null;
+        }
+    }
+
+    private Sprite GetCompanionWheelFor(int slot)
+    {
+        switch (slot)
+        {
+            case 1: return companion1WheelSprite;
+            case 2: return companion2WheelSprite;
+            case 3: return companion3WheelSprite;
+            case 4: return companion4WheelSprite;
+            default: return null;
         }
     }
 

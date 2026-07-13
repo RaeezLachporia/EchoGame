@@ -25,10 +25,18 @@ public class PlayerUi : MonoBehaviour
         }
     }
 
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => maxHealth;
+
     public void TakeDamage(float damage)
     {
         Debug.Log($"[PlayerUi] TakeDamage({damage}), currentHealth {currentHealth} -> {currentHealth - damage}");
         SetHealth(currentHealth - damage);
+    }
+
+    public void Heal(float amount)
+    {
+        SetHealth(currentHealth + amount);
     }
 
     public void SetHealth(float value)

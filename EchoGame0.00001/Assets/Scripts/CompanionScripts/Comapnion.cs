@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-public class Comapnion : MonoBehaviour, IDamageable
+public class Comapnion : MonoBehaviour, IDamageable, IHealable
 {
     [Header("Identity")]
     [Tooltip("Drag a companion asset here (e.g. Layla). Its name and health replace the values below. Leave empty to use the values below instead.")]
@@ -135,6 +135,9 @@ public class Comapnion : MonoBehaviour, IDamageable
         Debug.Log($"{displayName} interacted with player");
     }
 
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => maxHealth;
+
     public void TakeDamage(float damage)
     {
         currentHealth = Mathf.Max(0f, currentHealth - damage);
@@ -143,6 +146,13 @@ public class Comapnion : MonoBehaviour, IDamageable
 
         if (currentHealth <= 0f)
             Destroy(gameObject);
+    }
+
+    public void Heal(float amount)
+    {
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        if (CompanionHealthHud.Instance != null)
+            CompanionHealthHud.Instance.SetHealth(hudSlot, currentHealth);
     }
 
     void OnDestroy()

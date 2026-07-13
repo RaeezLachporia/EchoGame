@@ -53,6 +53,7 @@ public class BasicPlayerFollowScript : MonoBehaviour
     private NavMeshAgent agent;
     private InputManager playerInput;
     private CompanionCommand command;
+    private CompanionAbility[] abilities;
     private bool isFollowing = false;
     private bool isJumping = false;
 
@@ -78,6 +79,7 @@ public class BasicPlayerFollowScript : MonoBehaviour
         agent.updateRotation = false;
         agent.autoTraverseOffMeshLink = false;
         command = GetComponent<CompanionCommand>();
+        abilities = GetComponents<CompanionAbility>();
 
         if (animator == null)
             animator = GetComponent<Animator>();
@@ -120,6 +122,14 @@ public class BasicPlayerFollowScript : MonoBehaviour
         // SetDestination toward the player every frame and yanking the companion
         // away from the target.
         if (command != null && command.HasActiveCommand)
+        {
+            isFollowing = false;
+            return;
+        }
+
+        // If an ability is running (like Naledi off healing someone), don't follow —
+        // the ability is steering the companion right now.
+        if (AnyAbilityBusy())
         {
             isFollowing = false;
             return;
@@ -176,6 +186,13 @@ public class BasicPlayerFollowScript : MonoBehaviour
         currentSpeed = agent.velocity.magnitude;
         UpdateAnimation(currentSpeed);
         RotateTowardMovementDirection();
+    }
+
+    private bool AnyAbilityBusy()
+    {
+        for (int i = 0; i < abilities.Length; i++)
+            if (abilities[i] != null && abilities[i].IsBusy) return true;
+        return false;
     }
 
     private void UpdateAnimation(float speed)

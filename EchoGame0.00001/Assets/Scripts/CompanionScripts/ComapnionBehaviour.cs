@@ -26,6 +26,7 @@ public class ComapnionBehaviour : MonoBehaviour
     private NavMeshAgent agent;
     private BasicPlayerFollowScript follow;
     private CompanionCommand command;
+    private CompanionAbility[] abilities;
     private Rigidbody playerRb;
     private float playerStillTime;
     private float nextWanderTime;
@@ -35,6 +36,7 @@ public class ComapnionBehaviour : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         follow = GetComponent<BasicPlayerFollowScript>();
         command = GetComponent<CompanionCommand>();
+        abilities = GetComponents<CompanionAbility>();
     }
 
     void Start()
@@ -55,6 +57,13 @@ public class ComapnionBehaviour : MonoBehaviour
         // CompanionCommand for the agent destination while the companion is trying
         // to charge an enemy.
         if (command != null && command.HasActiveCommand)
+        {
+            playerStillTime = 0f;
+            return;
+        }
+
+        // If an ability is running (like Naledi off healing someone), don't wander.
+        if (AnyAbilityBusy())
         {
             playerStillTime = 0f;
             return;
@@ -81,6 +90,13 @@ public class ComapnionBehaviour : MonoBehaviour
             PickWanderTarget();
             nextWanderTime = Time.time + Random.Range(wanderInterval.x, wanderInterval.y);
         }
+    }
+
+    private bool AnyAbilityBusy()
+    {
+        for (int i = 0; i < abilities.Length; i++)
+            if (abilities[i] != null && abilities[i].IsBusy) return true;
+        return false;
     }
 
     private bool PlayerIsIdle()

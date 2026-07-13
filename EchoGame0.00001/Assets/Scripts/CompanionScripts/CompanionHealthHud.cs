@@ -6,7 +6,7 @@ public class CompanionHealthHud : MonoBehaviour
 
     [SerializeField] private HealthBarUi[] slots = new HealthBarUi[4];
 
-    [Tooltip("Optional. When set, companions use the bar matching their position in this list — first in the list gets the top bar. Leave empty for first-come-first-served.")]
+    [Tooltip("Drag the CompanionDatabase asset here so companions keep the same bar order as the list — first in the list gets the top bar.")]
     [SerializeField] private CompanionDatabase database;
 
     private readonly Object[] occupants = new Object[4];
@@ -42,15 +42,15 @@ public class CompanionHealthHud : MonoBehaviour
     {
         if (owner == null) return -1;
 
-        // Already has a bar? Just refresh it.
+        // This companion already has a bar? Just update it.
         for (int i = 0; i < slots.Length; i++)
         {
             if (occupants[i] == owner)
                 return Assign(i, owner, displayName, maxHealth, currentHealth);
         }
 
-        // Try the bar matching this companion's position in the database list,
-        // so the HUD order always matches the list — not whoever loaded first.
+        // Give them the bar matching their spot in the database list, so the
+        // HUD order matches the list instead of whoever happened to load first.
         if (database != null && definition != null)
         {
             int preferred = database.allCompanions.IndexOf(definition);
