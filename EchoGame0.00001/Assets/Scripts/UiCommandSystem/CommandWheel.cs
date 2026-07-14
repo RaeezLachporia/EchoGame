@@ -2,6 +2,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
+// The wheel is composed live instead of swapping full-wheel sprites:
+// a static background Image (lives in the scene, no reference needed here),
+// four icon Images sitting over the slices, and one highlight wedge that the
+// code rotates to the selected slice and tints for the confirm flash.
 public class CommandWheel : MonoBehaviour
 {
     private enum WheelState
@@ -19,8 +23,6 @@ public class CommandWheel : MonoBehaviour
     [SerializeField] private PlayerLockOn lockOn;
     [Tooltip("Where ATTACK gets its target from. Auto-found if empty.")]
     [SerializeField] private PlayerCrosshair crosshair;
-    [Tooltip("The wheel image we swap sprites on.")]
-    [SerializeField] private Image wheelImage;
 
     [Header("Companions")]
     [Tooltip("Companion for the TOP slice (d-pad up).")]
@@ -32,34 +34,28 @@ public class CommandWheel : MonoBehaviour
     [Tooltip("Companion for the LEFT slice (d-pad left).")]
     [SerializeField] private CompanionCommand companion4;
 
-    [Header("Sprites — Main Wheel")]
-    [Tooltip("Default main wheel (4 numbered companion slices).")]
-    [SerializeField] private Sprite idleSprite;
-    [Tooltip("Main wheel with the TOP slice highlighted.")]
-    [SerializeField] private Sprite companion1HighlightedSprite;
-    [Tooltip("Main wheel with the RIGHT slice highlighted.")]
-    [SerializeField] private Sprite companion2HighlightedSprite;
-    [Tooltip("Main wheel with the BOTTOM slice highlighted.")]
-    [SerializeField] private Sprite companion3HighlightedSprite;
-    [Tooltip("Main wheel with the LEFT slice highlighted.")]
-    [SerializeField] private Sprite companion4HighlightedSprite;
+    [Header("Wheel Pieces")]
+    [Tooltip("Icon Image sitting over the TOP slice.")]
+    [SerializeField] private Image iconTop;
+    [Tooltip("Icon Image sitting over the RIGHT slice.")]
+    [SerializeField] private Image iconRight;
+    [Tooltip("Icon Image sitting over the BOTTOM slice.")]
+    [SerializeField] private Image iconBottom;
+    [Tooltip("Icon Image sitting over the LEFT slice.")]
+    [SerializeField] private Image iconLeft;
+    [Tooltip("The single highlight wedge. Author the sprite pointing at the TOP slice — the wheel rotates it to the other three.")]
+    [SerializeField] private Image highlightImage;
 
-    [Header("Sprites — Companion Wheel")]
-    [Tooltip("Companion 1's command wheel.")]
-    [SerializeField] private Sprite companion1WheelSprite;
-    [Tooltip("Companion 2's command wheel. Falls back to companion 1's if empty.")]
-    [SerializeField] private Sprite companion2WheelSprite;
-    [Tooltip("Companion 3's command wheel. Falls back to companion 1's if empty.")]
-    [SerializeField] private Sprite companion3WheelSprite;
-    [Tooltip("Companion 4's command wheel. Falls back to companion 1's if empty.")]
-    [SerializeField] private Sprite companion4WheelSprite;
-    [Tooltip("Companion wheel with ATTACK highlighted.")]
-    [SerializeField] private Sprite attackHighlightedSprite;
+    [Header("Highlight Tints")]
+    [Tooltip("Highlight tint while a slice is selected. White = the sprite's own colours.")]
+    [SerializeField] private Color selectTint = Color.white;
+    [Tooltip("Highlight tint flashed on the slice whose command actually fired.")]
+    [SerializeField] private Color confirmTint = new Color(0.4f, 1f, 0.5f);
 
     [Header("Timing")]
-    [Tooltip("How long the highlight sprite shows before the companion wheel takes over.")]
+    [Tooltip("How long the highlight shows before the companion wheel takes over.")]
     [SerializeField, Min(0f)] private float companionHighlightHoldTime = 0.18f;
-    [Tooltip("How long the ATTACK highlight shows before returning to the main wheel.")]
+    [Tooltip("How long the confirm flash shows before returning to the main wheel.")]
     [SerializeField, Min(0f)] private float attackHighlightHoldTime = 0.18f;
 
     [Header("Debug")]
@@ -72,7 +68,9 @@ public class CommandWheel : MonoBehaviour
 
     private WheelState state = WheelState.Idle;
     private int selectedSlot; // 1 = top slice, 2 = right slice, 0 = none
+    private int confirmedSlice; // slice the confirm flash points at (0 = top)
     private float stateTimer;
+    private Image[] icons; // top, right, bottom, left — same order as slices
 
     void Awake()
     {
@@ -96,6 +94,8 @@ public class CommandWheel : MonoBehaviour
         if (aim == null) aim = FindObjectOfType<PlayerAimZoom>();
         if (lockOn == null) lockOn = FindObjectOfType<PlayerLockOn>();
         if (crosshair == null) crosshair = FindObjectOfType<PlayerCrosshair>();
+
+        icons = new[] { iconTop, iconRight, iconBottom, iconLeft };
     }
 
     void OnEnable()
@@ -222,9 +222,9 @@ public class CommandWheel : MonoBehaviour
         SetState(WheelState.CompanionHighlighted);
     }
 
-    private CompanionCommand GetSelectedCompanion()
+    private CompanionCommand GetCompanionInSlot(int slot)
     {
-        switch (selectedSlot)
+        switch (slot)
         {
             case 1: return companion1;
             case 2: return companion2;
@@ -232,6 +232,11 @@ public class CommandWheel : MonoBehaviour
             case 4: return companion4;
             default: return null;
         }
+    }
+
+    private CompanionCommand GetSelectedCompanion()
+    {
+        return GetCompanionInSlot(selectedSlot);
     }
 
     // Fires whichever ability sits in that slice of the selected companion's wheel.
@@ -260,8 +265,7 @@ public class CommandWheel : MonoBehaviour
         if (abilities[sliceIndex].TryActivate(target))
         {
             if (logDispatch) Debug.Log($"[CommandWheel] {companion.name} → {abilities[sliceIndex].abilityName}");
-            // Every ability shows the ATTACK confirm flash for now — the new
-            // wheel UI will give each its own later.
+            confirmedSlice = sliceIndex;
             stateTimer = attackHighlightHoldTime;
             SetState(WheelState.AttackHighlighted);
         }
@@ -292,6 +296,7 @@ public class CommandWheel : MonoBehaviour
         target.CommandAttack(enemy);
         if (logDispatch) Debug.Log($"[CommandWheel] {target.name} → attack {enemy.name}");
 
+        confirmedSlice = 0;
         stateTimer = attackHighlightHoldTime;
         SetState(WheelState.AttackHighlighted);
     }
@@ -305,50 +310,77 @@ public class CommandWheel : MonoBehaviour
             case WheelState.Idle:
                 selectedSlot = 0;
                 stateTimer = 0f;
-                SetSprite(idleSprite);
+                ShowCompanionIcons();
+                HideHighlight();
                 break;
 
             case WheelState.CompanionHighlighted:
-                SetSprite(GetHighlightedSpriteFor(selectedSlot));
+                ShowCompanionIcons();
+                ShowHighlight(selectedSlot - 1, selectTint);
                 break;
 
             case WheelState.CompanionWheel:
-                Sprite wheel = GetCompanionWheelFor(selectedSlot);
-                SetSprite(wheel != null ? wheel : companion1WheelSprite);
+                ShowAbilityIcons();
+                HideHighlight();
                 break;
 
             case WheelState.AttackHighlighted:
-                SetSprite(attackHighlightedSprite);
+                // Icons stay as they are — only the confirm flash changes.
+                ShowHighlight(confirmedSlice, confirmTint);
                 break;
         }
     }
 
-    private Sprite GetHighlightedSpriteFor(int slot)
+    // Main wheel: each slice shows the portrait of the companion in that slot.
+    // No portrait (or no companion) → the icon hides and the background's own
+    // slice art shows through.
+    private void ShowCompanionIcons()
     {
-        switch (slot)
-        {
-            case 1: return companion1HighlightedSprite;
-            case 2: return companion2HighlightedSprite;
-            case 3: return companion3HighlightedSprite;
-            case 4: return companion4HighlightedSprite;
-            default: return null;
-        }
+        for (int i = 0; i < icons.Length; i++)
+            SetIcon(icons[i], GetPortrait(GetCompanionInSlot(i + 1)));
     }
 
-    private Sprite GetCompanionWheelFor(int slot)
+    // Companion wheel: slices show the selected companion's ability icons in
+    // component order — the same order DispatchSlice fires them, so the picture
+    // and the dispatch can never disagree.
+    private void ShowAbilityIcons()
     {
-        switch (slot)
-        {
-            case 1: return companion1WheelSprite;
-            case 2: return companion2WheelSprite;
-            case 3: return companion3WheelSprite;
-            case 4: return companion4WheelSprite;
-            default: return null;
-        }
+        CompanionCommand companion = GetSelectedCompanion();
+        CompanionAbility[] abilities = companion != null
+            ? companion.GetComponents<CompanionAbility>()
+            : System.Array.Empty<CompanionAbility>();
+
+        for (int i = 0; i < icons.Length; i++)
+            SetIcon(icons[i], i < abilities.Length ? abilities[i].icon : null);
     }
 
-    private void SetSprite(Sprite sprite)
+    private static void SetIcon(Image image, Sprite sprite)
     {
-        if (wheelImage != null && sprite != null) wheelImage.sprite = sprite;
+        if (image == null) return;
+        image.sprite = sprite;
+        image.enabled = sprite != null;
+    }
+
+    private static Sprite GetPortrait(CompanionCommand companion)
+    {
+        if (companion == null) return null;
+        Comapnion body = companion.GetComponent<Comapnion>();
+        return body != null && body.Definition != null ? body.Definition.portrait : null;
+    }
+
+    // slice: 0 = TOP, 1 = RIGHT, 2 = BOTTOM, 3 = LEFT. The wedge sprite is
+    // authored on the TOP slice, so each step round the wheel is -90° (clockwise).
+    private void ShowHighlight(int slice, Color tint)
+    {
+        if (highlightImage == null) return;
+        highlightImage.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f * slice);
+        highlightImage.color = tint;
+        highlightImage.enabled = true;
+    }
+
+    private void HideHighlight()
+    {
+        if (highlightImage == null) return;
+        highlightImage.enabled = false;
     }
 }

@@ -137,6 +137,8 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
 
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
+    // The command wheel reads this to put the companion's portrait on its slice.
+    public CompanionDefinition Definition => definition;
 
     public void TakeDamage(float damage)
     {
