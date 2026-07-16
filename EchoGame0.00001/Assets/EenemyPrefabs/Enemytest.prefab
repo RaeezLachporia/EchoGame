@@ -474,6 +474,7 @@ GameObject:
   - component: {fileID: 6860874623474477073}
   - component: {fileID: 6112322724508556499}
   - component: {fileID: 4680910002911225463}
+  - component: {fileID: 9159337811813846432}
   m_Layer: 7
   m_Name: Enemytest
   m_TagString: Untagged
@@ -649,6 +650,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   eyeHeight: 1.62
+  giveUpDelay: 2
   animator: {fileID: 0}
   animationDampTime: 0.1
 --- !u!114 &7639307698268372916
@@ -725,6 +727,22 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.2, b: 0.2, a: 1}
   intensity: 0.34
   fadeSpeed: 12
+--- !u!114 &9159337811813846432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6098347863301187141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea1106138f385e5428c7225ce9cbe4b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyPatrolling
+  wanderRadius: {x: 2, y: 6}
+  wanderInterval: {x: 3, y: 6}
+  wanderSpeed: 2
+  arriveTolerance: 0.5
 --- !u!1 &7001077129245509042
 GameObject:
   m_ObjectHideFlags: 0

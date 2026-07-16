@@ -18,6 +18,10 @@ public class EnemyFollowPlayer : MonoBehaviour
     [SerializeField] private LayerMask lineOfSightObstacles;
     [SerializeField] private float eyeHeight = 1.5f;
 
+    [Header("Aggro")]
+    [Tooltip("Seconds after losing line of sight before we forget the target. During this window we walk to the last known position — not the target's live position, or we'd path through walls like an aimbot.")]
+    [SerializeField] private float giveUpDelay = 2f;
+
     [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField] private float animationDampTime = 0.1f;
@@ -25,9 +29,16 @@ public class EnemyFollowPlayer : MonoBehaviour
     private Transform player;
     private Transform companion;
     private Transform currentTarget;
+    private Vector3 lastKnownPosition;
+    // -1 = target in sight right now. Any other value is the Time.time at which we give up
+    // if line of sight isn't reacquired first.
+    private float loseTargetAt = -1f;
     private EnemyCombat combat;
     private NavMeshAgent agent;
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
+
+    // EnemyPatrolling reads this to yield the agent while chase/grip is active.
+    public bool HasTarget => currentTarget != null;
 
     void Awake()
     {
@@ -53,6 +64,14 @@ public class EnemyFollowPlayer : MonoBehaviour
             rb.isKinematic = true;
             rb.useGravity = false;
         }
+    }
+
+    // Pooled enemies keep their fields across lives. Without this, a reused enemy
+    // wakes up remembering the last target it saw before dying and chases its ghost.
+    void OnEnable()
+    {
+        currentTarget = null;
+        loseTargetAt = -1f;
     }
 
     void Start()
@@ -83,11 +102,40 @@ public class EnemyFollowPlayer : MonoBehaviour
         }
         else
         {
-            currentTarget = ChooseTarget();
-            if (currentTarget != null)
-                agent.SetDestination(currentTarget.position);
-            else if (agent.hasPath)
-                agent.ResetPath();
+            Transform visible = ChooseTarget();
+            if (visible != null)
+            {
+                // Sighted — commit to chase and update where they were last seen. If
+                // EnemyPatrolling was driving up to this frame the agent is on wander
+                // speed, so bump it to chase speed on the transition.
+                if (currentTarget == null) agent.speed = moveSpeed;
+                currentTarget = visible;
+                lastKnownPosition = visible.position;
+                loseTargetAt = -1f;
+                agent.SetDestination(visible.position);
+            }
+            else if (currentTarget != null)
+            {
+                // Just lost sight — arm the give-up timer once and grip on the last
+                // known position. Not the target's live position; pathing to that
+                // through walls would look like an aimbot.
+                if (loseTargetAt < 0f) loseTargetAt = Time.time + giveUpDelay;
+
+                if (Time.time < loseTargetAt)
+                {
+                    agent.SetDestination(lastKnownPosition);
+                }
+                else
+                {
+                    // Give up. Clear the path once so EnemyPatrolling can drive from
+                    // next frame — not every frame after, or patrol's destination gets
+                    // wiped the moment it sets one.
+                    currentTarget = null;
+                    loseTargetAt = -1f;
+                    if (agent.hasPath) agent.ResetPath();
+                }
+            }
+            // else: no target, no retention → don't touch the agent. Patrol drives.
 
             HandleRotation();
         }
@@ -148,25 +196,18 @@ public class EnemyFollowPlayer : MonoBehaviour
         animator.SetFloat(SpeedHash, speed, animationDampTime, Time.deltaTime);
     }
 
+    // Fresh acquisition requires line of sight — enemies patrol until they actually
+    // see a target. Retention (chasing after LOS breaks briefly) is handled in Update
+    // via loseTargetAt/lastKnownPosition, not here.
     private Transform ChooseTarget()
     {
-        bool playerInRange = player != null && InRange(player);
-        bool companionInRange = companion != null && InRange(companion);
+        bool playerVisible = player != null && InRange(player) && HasLineOfSight(player);
+        bool companionVisible = companion != null && InRange(companion) && HasLineOfSight(companion);
 
-        bool playerVisible = playerInRange && HasLineOfSight(player);
-        bool companionVisible = companionInRange && HasLineOfSight(companion);
-
-        // Prefer the closer target among those in line of sight.
         if (playerVisible && companionVisible)
             return Closer(player, companion);
         if (playerVisible) return player;
         if (companionVisible) return companion;
-
-        // Fallback: nothing in LOS — chase the closer one that's still in detection range.
-        if (playerInRange && companionInRange)
-            return Closer(player, companion);
-        if (playerInRange) return player;
-        if (companionInRange) return companion;
 
         return null;
     }
