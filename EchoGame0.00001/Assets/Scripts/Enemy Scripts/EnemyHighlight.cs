@@ -28,6 +28,16 @@ public class EnemyHighlight : MonoBehaviour
         CacheBaseColors();
     }
 
+    // Enemies almost always die while highlighted — you kill what you're aiming at.
+    // A pooled enemy keeps blend/highlighted across lives, so without this it comes
+    // back still tinted red.
+    void OnEnable()
+    {
+        highlighted = false;
+        blend = 0f;
+        ApplyTint();
+    }
+
     private void CacheBaseColors()
     {
         baseColors = new Color[renderers.Length][];

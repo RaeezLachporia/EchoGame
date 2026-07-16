@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
-
+using UnityEngine.Pool;
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyFollowPlayer : MonoBehaviour
 {
@@ -93,6 +93,30 @@ public class EnemyFollowPlayer : MonoBehaviour
         }
 
         UpdateAnimation();
+    }
+    private IObjectPool<EnemyFollowPlayer> EnemyPool;
+    public void SetPool(IObjectPool<EnemyFollowPlayer>pool)
+    {
+        EnemyPool = pool;
+    }
+
+    // Death routes here instead of Destroy so the enemy can be reused. Safe to
+    // call on an enemy that never came from a pool — see the fallback below.
+    public void ReturnToPool()
+    {
+        // Clear the path while we're still on the navmesh. A released enemy that
+        // keeps its path walks toward the old target for a frame after it's reused,
+        // and the leftover velocity leaks into the animator's Speed.
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.ResetPath();
+            agent.velocity = Vector3.zero;
+        }
+
+        // Enemies dropped into the scene by hand have no pool — destroying is the
+        // only way for them to die.
+        if (EnemyPool != null) EnemyPool.Release(this);
+        else Destroy(gameObject);
     }
 
     private void HandleRotation()

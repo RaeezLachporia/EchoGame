@@ -34,6 +34,18 @@ public class EnemyCombat : MonoBehaviour
         if (animator == null) animator = GetComponentInChildren<Animator>();
     }
 
+    // Pooled enemies keep their fields across lives. Killed mid-swing, this one
+    // would come back with isAttacking stuck true — and EnemyFollowPlayer freezes
+    // pathing while attacking, so it would just stand there. The trigger needs
+    // clearing too, or a latched Attack fires the instant it respawns.
+    void OnEnable()
+    {
+        isAttacking = false;
+        attackElapsed = 0f;
+        cooldownRemaining = 0f;
+        if (animator != null) animator.ResetTrigger(AttackHash);
+    }
+
     void Update()
     {
         if (cooldownRemaining > 0f) cooldownRemaining -= Time.deltaTime;

@@ -10,9 +10,21 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     [Header("UI (optional)")]
     [SerializeField] private Slider healthSlider;
 
-    void Start()
+    private EnemyFollowPlayer follow;
+    private bool isDead;
+
+    void Awake()
     {
-        currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+        follow = GetComponent<EnemyFollowPlayer>();
+    }
+
+    // OnEnable, not Start: a pooled enemy is re-activated rather than recreated, so
+    // Start only ever runs on its first life. Without this it comes back at the 0
+    // health it died with and dies again to the first hit.
+    void OnEnable()
+    {
+        isDead = false;
+        currentHealth = maxHealth;
         if (healthSlider != null)
         {
             healthSlider.minValue = 0f;
@@ -24,10 +36,21 @@ public class EnemyHealth : MonoBehaviour, IDamageable
 
     public void TakeDamage(float damage)
     {
+        // Attacks resolve with an overlap check, so two colliders on this enemy can
+        // both land in one frame. Both calls would see zero health and release, and
+        // the pool's collectionCheck throws on the second.
+        if (isDead) return;
+
         currentHealth = Mathf.Max(0f, currentHealth - damage);
         if (healthSlider != null) healthSlider.value = currentHealth;
 
         if (currentHealth <= 0f)
-            Destroy(gameObject);
+        {
+            isDead = true;
+            // ReturnToPool owns the pool-vs-destroy decision. Only fall back here if
+            // this is on something that isn't a follow-enemy at all.
+            if (follow != null) follow.ReturnToPool();
+            else Destroy(gameObject);
+        }
     }
 }
