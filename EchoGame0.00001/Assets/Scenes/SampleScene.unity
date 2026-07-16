@@ -4207,8 +4207,8 @@ MonoBehaviour:
   - {fileID: 2125780865}
   timeBetweenSpawning: 5
   enemyPrefab: {fileID: 4558396989632180022, guid: f61d8052cf4577a47bf3add43dc55fcb, type: 3}
-  maxActiveEnemies: 15
-  poolCapacity: 10
+  maxActiveEnemies: 5
+  poolCapacity: 5
   poolMaxSize: 30
 --- !u!4 &1975475646
 Transform:
