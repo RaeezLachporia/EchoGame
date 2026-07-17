@@ -28,10 +28,12 @@ public class EnemyCombat : MonoBehaviour
 
     private float cooldownRemaining;
     private float attackElapsed;
+    private EnemyFollowPlayer brain;
 
     void Awake()
     {
         if (animator == null) animator = GetComponentInChildren<Animator>();
+        brain = GetComponent<EnemyFollowPlayer>();
     }
 
     // Pooled enemies keep their fields across lives. Killed mid-swing, this one
@@ -58,6 +60,12 @@ public class EnemyCombat : MonoBehaviour
         }
 
         if (cooldownRemaining > 0f) return;
+
+        // Attacks belong to the Combat state. Alert stalks without swinging and
+        // Patrol obviously doesn't fight — so until the Combat state is wired up,
+        // no enemy initiates attacks. That's intentional staging, not a bug.
+        if (brain != null && brain.State != EnemyFollowPlayer.EnemyState.Combat) return;
+
         if (!TargetInHitbox()) return;
 
         StartAttack();

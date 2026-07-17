@@ -36,9 +36,10 @@ public class EnemyPatrolling : MonoBehaviour
 
     void Update()
     {
-        // Yield the moment EnemyFollowPlayer has a target — same pattern as
+        // Patrol only drives the agent while the brain is actually in Patrol —
+        // Alert (and later Combat) own the agent. Same yield pattern as
         // ComapnionBehaviour yielding to CompanionCommand.HasActiveCommand.
-        if (follow != null && follow.HasTarget) return;
+        if (follow != null && follow.State != EnemyFollowPlayer.EnemyState.Patrol) return;
         if (!agent.isOnNavMesh) return;
 
         // EnemyFollowPlayer sets a non-zero stoppingDistance for chase — the agent

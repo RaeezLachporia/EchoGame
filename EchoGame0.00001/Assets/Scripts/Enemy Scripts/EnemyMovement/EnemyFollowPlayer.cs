@@ -1,12 +1,24 @@
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Pool;
+
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyFollowPlayer : MonoBehaviour
 {
+    // Top-level enemy brain.
+    //   Patrol — EnemyPatrolling drives the agent; we just watch for the player.
+    //   Alert  — spotted the player: stalk them (chase + last-known grip) but
+    //            never swing. EnemyCombat checks this state and holds its attacks.
+    //   Combat — placeholder. Nothing transitions into it yet; attacking returns
+    //            when the combat state is built.
+    // Only the PLAYER triggers Patrol -> Alert. Companions are deliberately
+    // invisible to this script — they roam enough that they'd trip alerts
+    // constantly and drain the tension out of sneaking. How enemies respond to
+    // companions is a combat-state decision, not a vision one.
+    public enum EnemyState { Patrol, Alert, Combat }
+
     [Header("Targets")]
     [SerializeField] private string playerTag = "Player";
-    [SerializeField] private string companionTag = "Comapnion";
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 3f;
@@ -15,30 +27,72 @@ public class EnemyFollowPlayer : MonoBehaviour
 
     [Header("Detection")]
     [SerializeField] private float detectionRange = 15f;
+    [Tooltip("Total horizontal cone angle (degrees) used for the FRESH spot out of Patrol. Once alerted, LOS alone keeps the player — angle only gates the initial sighting, so Alert doesn't flicker every time you circle behind.")]
+    [SerializeField] private float fovAngle = 110f;
     [SerializeField] private LayerMask lineOfSightObstacles;
     [SerializeField] private float eyeHeight = 1.5f;
 
-    [Header("Aggro")]
-    [Tooltip("Seconds after losing line of sight before we forget the target. During this window we walk to the last known position — not the target's live position, or we'd path through walls like an aimbot.")]
+    [Header("Alert")]
+    [Tooltip("Seconds after losing line of sight before Alert gives up and drops back to Patrol. During this window the enemy walks to the last known position — not the player's live position, or it would path through walls like an aimbot.")]
     [SerializeField] private float giveUpDelay = 2f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField] private float animationDampTime = 0.1f;
 
+    [Header("State Tracking")]
+    [Tooltip("Read-only mirror of the current state so it shows live in the inspector during Play mode. Changing it by hand does nothing — State is driven from code.")]
+    [SerializeField] private EnemyState stateDisplay = EnemyState.Patrol;
+    [Tooltip("Log every state transition to the console with the enemy's name and timestamp.")]
+    [SerializeField] private bool logStateChanges = false;
+
     private Transform player;
-    private Transform companion;
-    private Transform currentTarget;
     private Vector3 lastKnownPosition;
-    // -1 = target in sight right now. Any other value is the Time.time at which we give up
-    // if line of sight isn't reacquired first.
-    private float loseTargetAt = -1f;
+    // Valid only while State == Alert && !PlayerInSight: the Time.time at which
+    // Alert gives up if sight isn't reacquired first.
+    private float giveUpAt;
     private EnemyCombat combat;
     private NavMeshAgent agent;
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
 
-    // EnemyPatrolling reads this to yield the agent while chase/grip is active.
-    public bool HasTarget => currentTarget != null;
+    // EnemyPatrolling yields the agent unless this is Patrol; EnemyCombat holds
+    // its swings unless this is Combat; EnemyVisionCone tints off it.
+    public EnemyState State { get; private set; } = EnemyState.Patrol;
+
+    // Fired on every real transition (not on pooled respawn resets), with
+    // (previous, next). Hook point for audio stingers, alert UI, and the
+    // upcoming Combat state — subscribe instead of polling State in Update.
+    public event System.Action<EnemyState, EnemyState> StateChanged;
+
+    // Seconds spent in the current state. Transition rules like "in Alert for
+    // 3s before escalating" read this instead of keeping their own timers.
+    public float TimeInState => Time.time - stateEnteredAt;
+    private float stateEnteredAt;
+
+    // Every transition funnels through here so tracking can't be bypassed:
+    // inspector mirror, entry timestamp, optional log, and the event all stay
+    // in sync no matter which state initiated the change.
+    private void SetState(EnemyState next)
+    {
+        if (next == State) return;
+        EnemyState previous = State;
+        State = next;
+        stateDisplay = next;
+        stateEnteredAt = Time.time;
+        if (logStateChanges)
+            Debug.Log($"[{name}] {previous} -> {next} @ {Time.time:F2}s", this);
+        StateChanged?.Invoke(previous, next);
+    }
+
+    // True while Alert has live line of sight (cone: red). False during the
+    // last-known grip (cone: orange). Always false in Patrol.
+    public bool PlayerInSight { get; private set; }
+
+    // EnemyVisionCone reads these to build and drive the ground-fan visual.
+    public float DetectionRange => detectionRange;
+    public float FovAngle => fovAngle;
+    public LayerMask SightObstacles => lineOfSightObstacles;
+    public float EyeHeight => eyeHeight;
 
     void Awake()
     {
@@ -64,26 +118,33 @@ public class EnemyFollowPlayer : MonoBehaviour
             rb.isKinematic = true;
             rb.useGravity = false;
         }
+
+        // Auto-attach the vision cone visualizer if it isn't wired on the prefab
+        // yet. Users who want to hide the cone can disable the component in the
+        // inspector without touching this script.
+        if (GetComponent<EnemyVisionCone>() == null) gameObject.AddComponent<EnemyVisionCone>();
     }
 
     // Pooled enemies keep their fields across lives. Without this, a reused enemy
-    // wakes up remembering the last target it saw before dying and chases its ghost.
+    // wakes up still Alert from its previous life and stalks a ghost. Direct
+    // reset, not SetState — a respawn isn't a gameplay transition, so it
+    // shouldn't fire StateChanged or show up in the transition log.
     void OnEnable()
     {
-        currentTarget = null;
-        loseTargetAt = -1f;
+        State = EnemyState.Patrol;
+        stateDisplay = EnemyState.Patrol;
+        stateEnteredAt = Time.time;
+        PlayerInSight = false;
     }
 
     void Start()
     {
         AcquirePlayer();
-        AcquireCompanion();
     }
 
     void Update()
     {
         if (player == null) AcquirePlayer();
-        if (companion == null) AcquireCompanion();
 
         // If the agent failed to spawn on the NavMesh, do nothing — SetDestination
         // would just log warnings and the animation would jitter on garbage velocity.
@@ -93,57 +154,93 @@ public class EnemyFollowPlayer : MonoBehaviour
             return;
         }
 
-        bool attacking = combat != null && combat.isAttacking;
-
-        if (attacking)
+        if (combat != null && combat.isAttacking)
         {
-            // Freeze pathing/rotation during the swing so the hitbox lands where committed.
+            // Freeze pathing/rotation during the swing so the hitbox lands where
+            // committed. Dormant until the Combat state re-enables attacks.
             if (agent.hasPath) agent.ResetPath();
         }
         else
         {
-            Transform visible = ChooseTarget();
-            if (visible != null)
+            switch (State)
             {
-                // Sighted — commit to chase and update where they were last seen. If
-                // EnemyPatrolling was driving up to this frame the agent is on wander
-                // speed, so bump it to chase speed on the transition.
-                if (currentTarget == null) agent.speed = moveSpeed;
-                currentTarget = visible;
-                lastKnownPosition = visible.position;
-                loseTargetAt = -1f;
-                agent.SetDestination(visible.position);
+                case EnemyState.Patrol: PatrolTick(); break;
+                case EnemyState.Alert: AlertTick(); break;
+                // Combat tick arrives with the combat-state work.
             }
-            else if (currentTarget != null)
-            {
-                // Just lost sight — arm the give-up timer once and grip on the last
-                // known position. Not the target's live position; pathing to that
-                // through walls would look like an aimbot.
-                if (loseTargetAt < 0f) loseTargetAt = Time.time + giveUpDelay;
-
-                if (Time.time < loseTargetAt)
-                {
-                    agent.SetDestination(lastKnownPosition);
-                }
-                else
-                {
-                    // Give up. Clear the path once so EnemyPatrolling can drive from
-                    // next frame — not every frame after, or patrol's destination gets
-                    // wiped the moment it sets one.
-                    currentTarget = null;
-                    loseTargetAt = -1f;
-                    if (agent.hasPath) agent.ResetPath();
-                }
-            }
-            // else: no target, no retention → don't touch the agent. Patrol drives.
-
             HandleRotation();
         }
 
         UpdateAnimation();
     }
+
+    // Patrol: EnemyPatrolling owns the agent. Our only job here is spotting the
+    // player — range, then FOV, then the LOS raycast, cheapest check first.
+    private void PatrolTick()
+    {
+        if (player == null) return;
+        if (InRange(player) && InFov(player) && HasLineOfSight(player))
+            EnterAlert();
+    }
+
+    private void EnterAlert()
+    {
+        SetState(EnemyState.Alert);
+        PlayerInSight = true;
+        lastKnownPosition = player.position;
+        // Patrol left the agent on wander speed — bump to chase speed.
+        agent.speed = moveSpeed;
+    }
+
+    // Alert: stalk the player and nothing else. Live sight -> chase their
+    // position. Sight broken -> grip the last-known position for giveUpDelay,
+    // then drop back to Patrol. No FOV check here: an alerted enemy is actively
+    // hunting, so LOS alone retains the player.
+    private void AlertTick()
+    {
+        if (player == null)
+        {
+            ReturnToPatrol();
+            return;
+        }
+
+        bool inSight = InRange(player) && HasLineOfSight(player);
+        if (inSight)
+        {
+            PlayerInSight = true;
+            lastKnownPosition = player.position;
+            agent.SetDestination(player.position);
+        }
+        else
+        {
+            // Arm the give-up timer once, on the frame sight breaks — not every
+            // frame after, or the timer would never expire.
+            if (PlayerInSight) giveUpAt = Time.time + giveUpDelay;
+            PlayerInSight = false;
+
+            if (Time.time < giveUpAt)
+            {
+                agent.SetDestination(lastKnownPosition);
+            }
+            else
+            {
+                ReturnToPatrol();
+            }
+        }
+    }
+
+    private void ReturnToPatrol()
+    {
+        SetState(EnemyState.Patrol);
+        PlayerInSight = false;
+        // Clear the path once so EnemyPatrolling can drive from next frame — not
+        // every frame after, or patrol's destination gets wiped the moment it
+        // sets one.
+        if (agent.hasPath) agent.ResetPath();
+    }
+
     private IObjectPool<EnemyFollowPlayer> EnemyPool;
-    public void SetPool(IObjectPool<EnemyFollowPlayer>pool)
+    public void SetPool(IObjectPool<EnemyFollowPlayer> pool)
     {
         EnemyPool = pool;
     }
@@ -169,17 +266,16 @@ public class EnemyFollowPlayer : MonoBehaviour
 
     private void HandleRotation()
     {
-        // If we have a target, always pivot to face them — the enemy is "locked
-        // on", so movement and facing are decoupled. Otherwise the agent's
-        // loop-around-stoppingDistance path keeps velocity nonzero and the
-        // enemy would circle the player while staring at the path tangent.
-        if (currentTarget != null)
+        // Locked on: pivot to face the player even while the body is still
+        // moving — otherwise the agent's loop-around-stoppingDistance path keeps
+        // velocity nonzero and the enemy circles while staring at the path tangent.
+        if (State == EnemyState.Alert && PlayerInSight && player != null)
         {
-            FaceTarget(currentTarget.position);
+            FaceTarget(player.position);
             return;
         }
 
-        // No target — face the direction we're wandering, if any.
+        // Otherwise face the direction we're walking (wander, or last-known grip).
         Vector3 velocity = agent.velocity;
         velocity.y = 0f;
         if (velocity.sqrMagnitude > 0.01f)
@@ -196,32 +292,17 @@ public class EnemyFollowPlayer : MonoBehaviour
         animator.SetFloat(SpeedHash, speed, animationDampTime, Time.deltaTime);
     }
 
-    // Fresh acquisition requires line of sight — enemies patrol until they actually
-    // see a target. Retention (chasing after LOS breaks briefly) is handled in Update
-    // via loseTargetAt/lastKnownPosition, not here.
-    private Transform ChooseTarget()
-    {
-        bool playerVisible = player != null && InRange(player) && HasLineOfSight(player);
-        bool companionVisible = companion != null && InRange(companion) && HasLineOfSight(companion);
-
-        if (playerVisible && companionVisible)
-            return Closer(player, companion);
-        if (playerVisible) return player;
-        if (companionVisible) return companion;
-
-        return null;
-    }
-
     private bool InRange(Transform t)
     {
         return Vector3.Distance(transform.position, t.position) <= detectionRange;
     }
 
-    private Transform Closer(Transform a, Transform b)
+    private bool InFov(Transform t)
     {
-        float da = Vector3.Distance(transform.position, a.position);
-        float db = Vector3.Distance(transform.position, b.position);
-        return da <= db ? a : b;
+        Vector3 toTarget = t.position - transform.position;
+        toTarget.y = 0f;
+        if (toTarget.sqrMagnitude < 0.0001f) return true;
+        return Vector3.Angle(transform.forward, toTarget) <= fovAngle * 0.5f;
     }
 
     private bool HasLineOfSight(Transform target)
@@ -233,7 +314,6 @@ public class EnemyFollowPlayer : MonoBehaviour
 
         if (Physics.Raycast(origin, dir.normalized, out RaycastHit hit, dist, lineOfSightObstacles, QueryTriggerInteraction.Ignore))
         {
-            // Something opaque is between us and the target.
             return hit.transform == target || hit.transform.IsChildOf(target);
         }
         return true;
@@ -254,21 +334,26 @@ public class EnemyFollowPlayer : MonoBehaviour
         if (go != null) player = go.transform;
     }
 
-    private void AcquireCompanion()
-    {
-        GameObject go = GameObject.FindGameObjectWithTag(companionTag);
-        if (go != null) companion = go.transform;
-    }
-
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
+        Gizmos.color = new Color(1f, 1f, 0f, 0.6f);
         Gizmos.DrawWireSphere(transform.position, detectionRange);
-        if (currentTarget != null)
+
+        // Two spokes at ± halfFov showing the cone edges in the scene view,
+        // so FOV is visible before Play mode where the mesh spawns.
+        float half = fovAngle * 0.5f;
+        Vector3 origin = transform.position + Vector3.up * 0.05f;
+        Vector3 leftEdge = Quaternion.AngleAxis(-half, Vector3.up) * transform.forward * detectionRange;
+        Vector3 rightEdge = Quaternion.AngleAxis(half, Vector3.up) * transform.forward * detectionRange;
+        Gizmos.DrawLine(origin, origin + leftEdge);
+        Gizmos.DrawLine(origin, origin + rightEdge);
+
+        if (State == EnemyState.Alert && player != null)
         {
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine(transform.position + Vector3.up * eyeHeight,
-                            currentTarget.position + Vector3.up * eyeHeight);
+            // Red = live sight line, orange = walking the last-known grip.
+            Gizmos.color = PlayerInSight ? Color.red : new Color(1f, 0.55f, 0.1f);
+            Vector3 to = PlayerInSight ? player.position : lastKnownPosition;
+            Gizmos.DrawLine(transform.position + Vector3.up * eyeHeight, to + Vector3.up * eyeHeight);
         }
     }
 }

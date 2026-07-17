@@ -475,6 +475,7 @@ GameObject:
   - component: {fileID: 6112322724508556499}
   - component: {fileID: 4680910002911225463}
   - component: {fileID: 9159337811813846432}
+  - component: {fileID: -1143872501896204309}
   m_Layer: 7
   m_Name: Enemytest
   m_TagString: Untagged
@@ -641,11 +642,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyFollowPlayer
   playerTag: Player
-  companionTag: Comapnion
   moveSpeed: 4.5
   rotationSpeed: 8
   stoppingDistance: 1.5
   detectionRange: 5.54
+  fovAngle: 110
   lineOfSightObstacles:
     serializedVersion: 2
     m_Bits: 0
@@ -653,6 +654,8 @@ MonoBehaviour:
   giveUpDelay: 2
   animator: {fileID: 0}
   animationDampTime: 0.1
+  stateDisplay: 0
+  logStateChanges: 1
 --- !u!114 &7639307698268372916
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -743,6 +746,26 @@ MonoBehaviour:
   wanderInterval: {x: 3, y: 6}
   wanderSpeed: 2
   arriveTolerance: 0.5
+--- !u!114 &-1143872501896204309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6098347863301187141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7283f40e431c6bd42a30e13c87198538, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyVisionCone
+  patrolColor: {r: 1, g: 0.9, b: 0.2, a: 0.28}
+  alertSearchColor: {r: 1, g: 0.55, b: 0.1, a: 0.38}
+  alertSightColor: {r: 1, g: 0.15, b: 0.15, a: 0.5}
+  groundOffset: 0.05
+  arcSegments: 32
+  colorLerpSpeed: 8
+  clipToObstacles: 1
+  clipCastHeight: 0.5
 --- !u!1 &7001077129245509042
 GameObject:
   m_ObjectHideFlags: 0
