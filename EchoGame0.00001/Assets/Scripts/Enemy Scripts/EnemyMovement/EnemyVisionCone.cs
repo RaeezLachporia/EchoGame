@@ -101,6 +101,13 @@ public class EnemyVisionCone : MonoBehaviour
     // running in Update would leave the cone one frame behind their facing.
     void LateUpdate()
     {
+        // The cone is a stealth-phase readout: it answers "can they see me yet?"
+        // Once an enemy is in Combat that question is settled, so the cone comes
+        // off entirely. It returns if they lose the player and fall back to Alert.
+        bool show = enemy.State != EnemyFollowPlayer.EnemyState.Combat;
+        if (meshRenderer.enabled != show) meshRenderer.enabled = show;
+        if (!show) return;
+
         if (clipToObstacles) UpdateFan();
         UpdateColor();
     }
@@ -130,16 +137,12 @@ public class EnemyVisionCone : MonoBehaviour
         mesh.RecalculateBounds();
     }
 
+    // Combat isn't handled here — the renderer is off by then.
     private void UpdateColor()
     {
-        Color target = enemy.State switch
-        {
-            EnemyFollowPlayer.EnemyState.Alert =>
-                enemy.PlayerInSight ? alertSightColor : alertSearchColor,
-            // Combat isn't reachable yet; when it lands it reads as full red too.
-            EnemyFollowPlayer.EnemyState.Combat => alertSightColor,
-            _ => patrolColor,
-        };
+        Color target = enemy.State == EnemyFollowPlayer.EnemyState.Alert
+            ? (enemy.PlayerInSight ? alertSightColor : alertSearchColor)
+            : patrolColor;
         coneMaterial.color = Color.Lerp(coneMaterial.color, target, colorLerpSpeed * Time.deltaTime);
     }
 }

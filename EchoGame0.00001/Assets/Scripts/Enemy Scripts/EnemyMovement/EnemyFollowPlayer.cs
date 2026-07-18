@@ -8,13 +8,23 @@ public class EnemyFollowPlayer : MonoBehaviour
     // Top-level enemy brain.
     //   Patrol — EnemyPatrolling drives the agent; we just watch for the player.
     //   Alert  — spotted the player: stalk them (chase + last-known grip) but
-    //            never swing. EnemyCombat checks this state and holds its attacks.
-    //   Combat — placeholder. Nothing transitions into it yet; attacking returns
-    //            when the combat state is built.
-    // Only the PLAYER triggers Patrol -> Alert. Companions are deliberately
-    // invisible to this script — they roam enough that they'd trip alerts
-    // constantly and drain the tension out of sneaking. How enemies respond to
-    // companions is a combat-state decision, not a vision one.
+    //            never swing. EnemyCombat holds its attacks outside Combat.
+    //   Combat — fully committed: chase and attack. The vision cone switches off
+    //            (stealth is over, so the readout stops being useful) and entering
+    //            it rallies nearby enemies into Combat as well.
+    //
+    // Escalation into Combat has three routes, all through EnterCombat():
+    //   1. Alert holds line of sight for secondsToEngage.
+    //   2. The player lands a hit (PlayerBasicCombat calls it directly).
+    //   3. A nearby enemy rallies us when IT enters Combat.
+    //
+    // Only the PLAYER drives any of this. Companions are deliberately invisible
+    // here — they roam enough that they'd trip alerts constantly and drain the
+    // tension out of sneaking, and companion-dealt damage doesn't aggro either.
+    // The intended future hook is the player ORDERING a companion to attack,
+    // which would call EnterCombat explicitly — player intent, not companion
+    // proximity. That's why combat entry is an explicit call rather than
+    // something inferred from the damage path.
     public enum EnemyState { Patrol, Alert, Combat }
 
     [Header("Targets")]
@@ -36,6 +46,16 @@ public class EnemyFollowPlayer : MonoBehaviour
     [Tooltip("Seconds after losing line of sight before Alert gives up and drops back to Patrol. During this window the enemy walks to the last known position — not the player's live position, or it would path through walls like an aimbot.")]
     [SerializeField] private float giveUpDelay = 2f;
 
+    [Header("Combat")]
+    [Tooltip("Seconds of line of sight during Alert before the enemy commits to Combat. Time only accrues while the player is actually visible, so ducking behind cover stalls the countdown rather than resetting it.")]
+    [SerializeField] private float secondsToEngage = 2.5f;
+    [Tooltip("Seconds after losing sight in Combat before de-escalating back to Alert. Longer than the Alert give-up — a committed enemy searches harder before losing interest.")]
+    [SerializeField] private float combatGiveUpDelay = 4f;
+    [Tooltip("Radius of the rally shout fired when this enemy enters Combat: every enemy inside it is pulled into Combat too. Deliberately ignores line of sight — it's a yell, it carries through walls. Set to 0 to make this enemy fight alone.")]
+    [SerializeField] private float rallyRadius = 12f;
+    [Tooltip("Layers searched for enemies to rally. Narrow this to your Enemy layer so the overlap check isn't sifting through level geometry.")]
+    [SerializeField] private LayerMask rallyLayers = ~0;
+
     [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField] private float animationDampTime = 0.1f;
@@ -48,10 +68,15 @@ public class EnemyFollowPlayer : MonoBehaviour
 
     private Transform player;
     private Vector3 lastKnownPosition;
-    // Valid only while State == Alert && !PlayerInSight: the Time.time at which
-    // Alert gives up if sight isn't reacquired first.
+    // The Time.time at which the current state gives up on a player it can't
+    // see. Shared by Alert and Combat — they're mutually exclusive, and each
+    // arms it with its own delay.
     private float giveUpAt;
+    // Accumulated seconds of line of sight during the current Alert. Escalates
+    // to Combat at secondsToEngage; reset whenever Alert is (re-)entered.
+    private float sightedDuration;
     private EnemyCombat combat;
+    private EnemyHealth health;
     private NavMeshAgent agent;
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
 
@@ -84,8 +109,9 @@ public class EnemyFollowPlayer : MonoBehaviour
         StateChanged?.Invoke(previous, next);
     }
 
-    // True while Alert has live line of sight (cone: red). False during the
-    // last-known grip (cone: orange). Always false in Patrol.
+    // True while Alert or Combat has live line of sight on the player. In Alert
+    // this drives the cone's red-vs-orange tint; in Combat the cone is hidden
+    // and it just gates facing and the give-up timer. Always false in Patrol.
     public bool PlayerInSight { get; private set; }
 
     // EnemyVisionCone reads these to build and drive the ground-fan visual.
@@ -97,6 +123,7 @@ public class EnemyFollowPlayer : MonoBehaviour
     void Awake()
     {
         combat = GetComponent<EnemyCombat>();
+        health = GetComponent<EnemyHealth>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
 
         agent = GetComponent<NavMeshAgent>();
@@ -135,6 +162,7 @@ public class EnemyFollowPlayer : MonoBehaviour
         stateDisplay = EnemyState.Patrol;
         stateEnteredAt = Time.time;
         PlayerInSight = false;
+        sightedDuration = 0f;
     }
 
     void Start()
@@ -166,7 +194,7 @@ public class EnemyFollowPlayer : MonoBehaviour
             {
                 case EnemyState.Patrol: PatrolTick(); break;
                 case EnemyState.Alert: AlertTick(); break;
-                // Combat tick arrives with the combat-state work.
+                case EnemyState.Combat: CombatTick(); break;
             }
             HandleRotation();
         }
@@ -187,6 +215,7 @@ public class EnemyFollowPlayer : MonoBehaviour
     {
         SetState(EnemyState.Alert);
         PlayerInSight = true;
+        sightedDuration = 0f;
         lastKnownPosition = player.position;
         // Patrol left the agent on wander speed — bump to chase speed.
         agent.speed = moveSpeed;
@@ -210,6 +239,12 @@ public class EnemyFollowPlayer : MonoBehaviour
             PlayerInSight = true;
             lastKnownPosition = player.position;
             agent.SetDestination(player.position);
+
+            // Commit once we've held eyes on them long enough. The timer only
+            // advances while they're actually visible, so breaking sight stalls
+            // it rather than clearing it — repeated peeking still escalates.
+            sightedDuration += Time.deltaTime;
+            if (sightedDuration >= secondsToEngage) EnterCombat(player.position);
         }
         else
         {
@@ -229,10 +264,94 @@ public class EnemyFollowPlayer : MonoBehaviour
         }
     }
 
+    // The single door into Combat, for all three routes: the Alert sighting
+    // timer, the player landing a hit, and a rally from a nearby enemy. Public
+    // so callers don't need to know anything about Alert or the sight timer —
+    // they just hand over where the player is known to be.
+    public void EnterCombat(Vector3 knownPosition)
+    {
+        // Already committed. This early-out is also what stops the rally from
+        // ping-ponging: A pulls in B, B's own rally finds A already in Combat
+        // and stops there, so a cluster is swept exactly once.
+        if (State == EnemyState.Combat) return;
+
+        // A killing blow must not rally. Without this, a silent takedown would
+        // scream to everyone in rallyRadius and stealth kills would be pointless.
+        // Callers damage first, then call this, so isDead is already settled.
+        if (health != null && !health.IsAlive) return;
+
+        lastKnownPosition = knownPosition;
+        agent.speed = moveSpeed;
+        // Arm the give-up window up front: Combat can be entered blind (hit from
+        // behind, or rallied from across the room), and the enemy needs its full
+        // hunting window even having never laid eyes on the player.
+        giveUpAt = Time.time + combatGiveUpDelay;
+        SetState(EnemyState.Combat);
+        Rally();
+    }
+
+    // Combat: run the player down and let EnemyCombat swing when it's close
+    // enough. No FOV gate and no sighting timer — this enemy is past deciding.
+    private void CombatTick()
+    {
+        if (player == null)
+        {
+            ReturnToPatrol();
+            return;
+        }
+
+        bool inSight = InRange(player) && HasLineOfSight(player);
+        if (inSight)
+        {
+            PlayerInSight = true;
+            lastKnownPosition = player.position;
+            // Refresh rather than arm-on-transition (which is what Alert does):
+            // Combat can start without sight, so there's no reliable "frame we
+            // lost them" to hang the timer off.
+            giveUpAt = Time.time + combatGiveUpDelay;
+            agent.SetDestination(player.position);
+        }
+        else
+        {
+            PlayerInSight = false;
+            if (Time.time < giveUpAt) agent.SetDestination(lastKnownPosition);
+            else DeEscalateToAlert();
+        }
+    }
+
+    // Combat -> Alert rather than straight to Patrol. A committed enemy that
+    // loses the player should sweep the last known position first (the cone
+    // reappears in its orange searching tint), and Alert's own give-up handles
+    // the drop back to Patrol from there.
+    private void DeEscalateToAlert()
+    {
+        SetState(EnemyState.Alert);
+        PlayerInSight = false;
+        sightedDuration = 0f;
+        giveUpAt = Time.time + giveUpDelay;
+    }
+
+    // The shout. Every enemy in range joins the fight and inherits what we know
+    // about the player's position, so they converge on somewhere useful instead
+    // of milling around. No line-of-sight filter: this is noise, not sight.
+    private void Rally()
+    {
+        if (rallyRadius <= 0f) return;
+
+        Collider[] nearby = Physics.OverlapSphere(transform.position, rallyRadius, rallyLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < nearby.Length; i++)
+        {
+            EnemyFollowPlayer other = nearby[i].GetComponentInParent<EnemyFollowPlayer>();
+            if (other == null || other == this) continue;
+            other.EnterCombat(lastKnownPosition);
+        }
+    }
+
     private void ReturnToPatrol()
     {
         SetState(EnemyState.Patrol);
         PlayerInSight = false;
+        sightedDuration = 0f;
         // Clear the path once so EnemyPatrolling can drive from next frame — not
         // every frame after, or patrol's destination gets wiped the moment it
         // sets one.
@@ -268,8 +387,11 @@ public class EnemyFollowPlayer : MonoBehaviour
     {
         // Locked on: pivot to face the player even while the body is still
         // moving — otherwise the agent's loop-around-stoppingDistance path keeps
-        // velocity nonzero and the enemy circles while staring at the path tangent.
-        if (State == EnemyState.Alert && PlayerInSight && player != null)
+        // velocity nonzero and the enemy circles while staring at the path
+        // tangent. PlayerInSight is only ever true in Alert or Combat, so this
+        // covers both without naming them. It matters more in Combat: the attack
+        // hitbox projects straight out of transform.forward.
+        if (PlayerInSight && player != null)
         {
             FaceTarget(player.position);
             return;
@@ -348,7 +470,14 @@ public class EnemyFollowPlayer : MonoBehaviour
         Gizmos.DrawLine(origin, origin + leftEdge);
         Gizmos.DrawLine(origin, origin + rightEdge);
 
-        if (State == EnemyState.Alert && player != null)
+        // Rally reach — who this enemy drags into a fight when it commits.
+        if (rallyRadius > 0f)
+        {
+            Gizmos.color = new Color(1f, 0.3f, 0f, 0.35f);
+            Gizmos.DrawWireSphere(transform.position, rallyRadius);
+        }
+
+        if (State != EnemyState.Patrol && player != null)
         {
             // Red = live sight line, orange = walking the last-known grip.
             Gizmos.color = PlayerInSight ? Color.red : new Color(1f, 0.55f, 0.1f);

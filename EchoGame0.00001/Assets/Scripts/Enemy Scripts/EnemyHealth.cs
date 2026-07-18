@@ -13,6 +13,10 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     private EnemyFollowPlayer follow;
     private bool isDead;
 
+    // EnemyFollowPlayer.EnterCombat checks this so a killing blow can't rally
+    // the room — a takedown that drops an enemy should stay silent.
+    public bool IsAlive => !isDead;
+
     void Awake()
     {
         follow = GetComponent<EnemyFollowPlayer>();

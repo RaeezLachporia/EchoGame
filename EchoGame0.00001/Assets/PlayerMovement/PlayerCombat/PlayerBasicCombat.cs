@@ -47,6 +47,14 @@ public class PlayerBasicCombat : MonoBehaviour
         {
             IDamageable damageable = hit.GetComponent<IDamageable>();
             damageable?.TakeDamage(attackDamage);
+
+            // Getting struck commits an enemy to Combat no matter what it could
+            // see. Told explicitly rather than routed through TakeDamage, because
+            // IDamageable carries no attacker and aggro is deliberately
+            // player-only — a companion hitting the same enemy must not trigger
+            // this. Order matters: damage first, so a killing blow leaves the
+            // enemy dead and EnterCombat's own is-alive check silences its rally.
+            hit.GetComponentInParent<EnemyFollowPlayer>()?.EnterCombat(transform.position);
         }
     }
 
