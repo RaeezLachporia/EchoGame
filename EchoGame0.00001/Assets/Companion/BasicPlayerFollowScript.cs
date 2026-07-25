@@ -24,6 +24,10 @@ public class BasicPlayerFollowScript : MonoBehaviour
     public float jumpArcHeight = 0.5f;
     [Tooltip("Extra arc height per metre of horizontal distance.")]
     public float jumpArcPerMeter = 0.12f;
+    [Tooltip("A downward link deeper than this plays the hard-landing (crouch) animation on touchdown; shallower drops use the soft fall.")]
+    public float hardLandDropHeight = 2f;
+    [Tooltip("Seconds the companion is frozen in place after a hard landing while the crouch recovery plays. Set near the hard-landing clip length.")]
+    public float hardLandLockTime = 1.2f;
 
     [Header("Animation")]
     public Animator animator;
@@ -78,6 +82,8 @@ public class BasicPlayerFollowScript : MonoBehaviour
     private float speedMultiplier = 1f;
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int JumpHash = Animator.StringToHash("IsJumping");
+    private static readonly int FallHash = Animator.StringToHash("Fall");
+    private static readonly int HardLandHash = Animator.StringToHash("HardLand");
 
     private void Awake()
     {
@@ -244,17 +250,28 @@ public class BasicPlayerFollowScript : MonoBehaviour
         float horizontalDistance = flatDelta.magnitude;
         float rise = end.y - start.y;
 
-        float duration = jumpBaseDuration + jumpTimePerMeter * horizontalDistance;
-        // Arc peaks this far above the higher endpoint. The straight lerp already
-        // sits at rise*0.5 mid-jump, so floor the arc above that to guarantee we
-        // clear the lip when hopping up (and give big drops a visible leap too).
-        float arc = Mathf.Max(jumpArcHeight + jumpArcPerMeter * horizontalDistance,
-                              Mathf.Abs(rise) * 0.5f + 0.15f);
+        // How far we drop (0 when going up or level). Drives the fall/hard-land
+        // choice and stretches a tall drop out so the fall actually reads.
+        float drop = Mathf.Max(0f, -rise);
+
+        float duration = jumpBaseDuration + jumpTimePerMeter * (horizontalDistance + drop);
+
+        float arc;
+        if (drop > 0.05f)
+            // Dropping off a ledge — only a small step-off bump, then let the lerp
+            // carry us down. No big loft up before falling.
+            arc = jumpArcHeight * 0.4f + jumpArcPerMeter * horizontalDistance;
+        else
+            // Hopping up or across — floor the arc above rise*0.5 so we clear the lip.
+            arc = Mathf.Max(jumpArcHeight + jumpArcPerMeter * horizontalDistance,
+                            rise * 0.5f + 0.15f);
 
         if (animator != null)
         {
-            animator.speed = 1f; // play the jump clip at its authored rate, not the scaled run rate
-            animator.SetTrigger(JumpHash);
+            animator.speed = 1f; // play the clip at its authored rate, not the scaled run rate
+            // Fall pose while descending; a plain hop going up/level. The crouch
+            // hard-landing is punched in on touchdown below for deep drops.
+            animator.SetTrigger(drop > 0.3f ? FallHash : JumpHash);
         }
 
         float elapsed = 0f;
@@ -274,7 +291,25 @@ public class BasicPlayerFollowScript : MonoBehaviour
         }
 
         transform.position = end;
+
+        // Big drop: punch the crouch landing right as we touch down (the fall
+        // pose played during the descent above).
+        bool hardLanding = drop > hardLandDropHeight;
+        if (hardLanding && animator != null)
+            animator.SetTrigger(HardLandHash);
+
         agent.CompleteOffMeshLink();
+
+        // Freeze in place through the crouch recovery so it can't slide off while
+        // the hard landing plays, then hand control back.
+        if (hardLanding)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+            yield return new WaitForSeconds(hardLandLockTime);
+            agent.isStopped = false;
+        }
+
         isJumping = false;
     }
 

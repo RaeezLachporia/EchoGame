@@ -10,6 +10,9 @@ public class AnimatorManager : MonoBehaviour
    int isJumping;
    int isRolling;
    int isAttacking;
+   int isGrounded;
+   int fall;
+   int hardLand;
    private void Awake()
    {
       animator = GetComponent<Animator>();
@@ -19,6 +22,9 @@ public class AnimatorManager : MonoBehaviour
       isJumping = Animator.StringToHash("IsJumping");
       isRolling = Animator.StringToHash("IsRolling");
       isAttacking = Animator.StringToHash("IsAttacking");
+      isGrounded = Animator.StringToHash("IsGrounded");
+      fall = Animator.StringToHash("Fall");
+      hardLand = Animator.StringToHash("HardLand");
    }
 
    public void playJumpAnimation()
@@ -34,6 +40,21 @@ public class AnimatorManager : MonoBehaviour
    public void playAttackAnimation()
    {
       animator.SetTrigger(isAttacking);
+   }
+
+   public void playFallAnimation()
+   {
+      animator.SetTrigger(fall);
+   }
+
+   public void playHardLandAnimation()
+   {
+      animator.SetTrigger(hardLand);
+   }
+
+   public void setGrounded(bool grounded)
+   {
+      animator.SetBool(isGrounded, grounded);
    }
 
    public void updateAnimatorValues(float horizontalMovement, float verticalMovement, bool sprinting = false)
