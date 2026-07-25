@@ -13,7 +13,12 @@ public class PlayerLocomotion : MonoBehaviour
    public float runSpeed = 6f;
    public float sprintSpeed = 10f;
    public float rotationSpeed = 15;
-   public float jumpForce = 6f;
+   // Peak height (in metres) the collider's base reaches at the apex of a jump.
+   // Launch velocity is derived from gravity — v = sqrt(2 * g * height) — so this
+   // stays accurate if gravity changes. Set it just ABOVE the ledge you want to
+   // clear: the jump animation is cosmetic and does not move the collider, so the
+   // capsule only rises by this amount regardless of what the clip shows.
+   public float jumpHeight = 1.5f;
    public float dodgeSpeed = 8f;
    public float dodgeDuration = 0.2f;
    private Vector3 rollDirection;
@@ -67,7 +72,8 @@ public class PlayerLocomotion : MonoBehaviour
       if (!isGrounded) return;
 
       animatorManager.playJumpAnimation();
-      playerRigidBody.linearVelocity = new Vector3(playerRigidBody.linearVelocity.x, jumpForce, playerRigidBody.linearVelocity.z);
+      float jumpVelocity = Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * jumpHeight);
+      playerRigidBody.linearVelocity = new Vector3(playerRigidBody.linearVelocity.x, jumpVelocity, playerRigidBody.linearVelocity.z);
       jumpCooldown = jumpCooldownTime;
       isGrounded = false;
    }

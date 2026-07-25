@@ -2253,7 +2253,7 @@ MonoBehaviour:
   runSpeed: 6
   sprintSpeed: 10
   rotationSpeed: 15
-  jumpForce: 3
+  jumpHeight: 1.5
   dodgeSpeed: 8
   dodgeDuration: 0.5
 --- !u!114 &1053582021
@@ -5050,10 +5050,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 8711830233340729599}
+      addedObject: {fileID: 8711830233340729600}
     - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 8711830233340729600}
+      addedObject: {fileID: 8711830233340729599}
   m_SourcePrefab: {fileID: 100100000, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
 --- !u!4 &6115972589266347390 stripped
 Transform:

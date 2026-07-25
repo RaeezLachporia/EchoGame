@@ -16,8 +16,14 @@ public class BasicPlayerFollowScript : MonoBehaviour
     public float rotationSpeed = 10f;
 
     [Header("Jump Settings")]
-    public float jumpDuration = 0.6f;
-    public float jumpHeight = 1.5f;
+    [Tooltip("Base time (seconds) to cross a link. Horizontal distance adds more on top (jumpTimePerMeter) so short steps hop quickly and long leaps aren't rushed.")]
+    public float jumpBaseDuration = 0.4f;
+    [Tooltip("Seconds added per metre of horizontal link distance.")]
+    public float jumpTimePerMeter = 0.06f;
+    [Tooltip("Arc peak height above the higher end of the link. Kept small so short steps read as hops; wide gaps arc higher via jumpArcPerMeter. Also floored so up-jumps always clear the lip.")]
+    public float jumpArcHeight = 0.5f;
+    [Tooltip("Extra arc height per metre of horizontal distance.")]
+    public float jumpArcPerMeter = 0.12f;
 
     [Header("Animation")]
     public Animator animator;
@@ -225,25 +231,44 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
         OffMeshLinkData link = agent.currentOffMeshLinkData;
         Vector3 start = transform.position;
-        Vector3 end = link.endPos;
+        // link.endPos sits on the navmesh surface, but the agent normally rests
+        // baseOffset above it (transform.position already includes that offset).
+        // Add it back to the landing point or the companion lands baseOffset units
+        // into the floor and pops out when CompleteOffMeshLink snaps it up.
+        Vector3 end = link.endPos + Vector3.up * agent.baseOffset;
+
+        // Size the hop to the actual link: a short step gets a small, quick hop
+        // while a wide gap gets a longer, higher arc. Horizontal distance drives
+        // both, so a 0.5 m step doesn't get the same floaty leap as a 4 m jump.
+        Vector3 flatDelta = new Vector3(end.x - start.x, 0f, end.z - start.z);
+        float horizontalDistance = flatDelta.magnitude;
+        float rise = end.y - start.y;
+
+        float duration = jumpBaseDuration + jumpTimePerMeter * horizontalDistance;
+        // Arc peaks this far above the higher endpoint. The straight lerp already
+        // sits at rise*0.5 mid-jump, so floor the arc above that to guarantee we
+        // clear the lip when hopping up (and give big drops a visible leap too).
+        float arc = Mathf.Max(jumpArcHeight + jumpArcPerMeter * horizontalDistance,
+                              Mathf.Abs(rise) * 0.5f + 0.15f);
 
         if (animator != null)
+        {
+            animator.speed = 1f; // play the jump clip at its authored rate, not the scaled run rate
             animator.SetTrigger(JumpHash);
+        }
 
         float elapsed = 0f;
-        while (elapsed < jumpDuration)
+        while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / jumpDuration;
+            float t = elapsed / duration;
             Vector3 pos = Vector3.Lerp(start, end, t);
-            pos.y += jumpHeight * Mathf.Sin(t * Mathf.PI);
+            pos.y += arc * Mathf.Sin(t * Mathf.PI);
             transform.position = pos;
 
             // face the direction of travel during the jump
-            Vector3 dir = (end - start);
-            dir.y = 0f;
-            if (dir.sqrMagnitude > 0.01f)
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), rotationSpeed * Time.deltaTime);
+            if (flatDelta.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(flatDelta), rotationSpeed * Time.deltaTime);
 
             yield return null;
         }
