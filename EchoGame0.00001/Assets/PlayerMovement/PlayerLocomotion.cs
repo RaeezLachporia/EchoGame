@@ -29,6 +29,12 @@ public class PlayerLocomotion : MonoBehaviour
    // Landing after dropping more than this far below take-off plays the hard
    // (crouch) landing; shallower drops blend straight back to locomotion.
    public float hardLandDropHeight = 2f;
+   // Rolling off a ledge normally suppresses the fall animation so the roll clip
+   // plays through. Once a roll has descended more than this, though, it is a real
+   // fall (not a low hop) and we release the roll to the fall animation — a roll
+   // held through a long drop reads as floating in mid-air. Keep this <=
+   // hardLandDropHeight so a big roll-drop still resolves into a hard landing.
+   public float rollFallBreakHeight = 1.5f;
    // Seconds the player is frozen after a hard landing while the crouch recovery
    // plays. Set this to roughly the hard-landing clip length.
    public float hardLandLockTime = 1.2f;
@@ -42,6 +48,10 @@ public class PlayerLocomotion : MonoBehaviour
    private bool wasGrounded = true;
    private float takeoffY;
    private bool falling;
+   // True while a roll should be protected from the fall animation (see
+   // rollFallBreakHeight). Set when a roll starts, cleared on landing / when the
+   // roll becomes a real fall.
+   private bool rolling;
    private float hardLandTimer;
 
    private void Awake()
@@ -111,11 +121,16 @@ public class PlayerLocomotion : MonoBehaviour
 
       float descended = takeoffY - transform.position.y;
 
+      // Suppress the fall while a roll is protected so the roll clip plays through;
+      // once the roll has dropped past rollFallBreakHeight it is a real fall, so we
+      // release the roll and let the fall animation take over.
       if (!isGrounded && !falling
           && playerRigidBody.linearVelocity.y < -fallTriggerSpeed
-          && descended > fallStartDrop)
+          && descended > fallStartDrop
+          && (!rolling || descended > rollFallBreakHeight))
       {
          falling = true;
+         rolling = false;
          animatorManager.playFallAnimation();
       }
 
@@ -128,6 +143,12 @@ public class PlayerLocomotion : MonoBehaviour
          }
          falling = false;
       }
+
+      // Drop the roll's fall protection once we're back on the ground and the roll
+      // impulse is spent — covers both landing from a ledge roll and a flat roll,
+      // and stops a stale roll from muting a later, un-rolled fall.
+      if (isGrounded && dodgeTimer <= 0f)
+         rolling = false;
 
       animatorManager.setGrounded(isGrounded);
       wasGrounded = isGrounded;
@@ -143,6 +164,7 @@ public class PlayerLocomotion : MonoBehaviour
          : new Vector3(transform.forward.x, 0f, transform.forward.z);
 
       animatorManager.playRollAnimation();
+      rolling = true;
       dodgeTimer = dodgeDuration;
       playerRigidBody.linearVelocity = new Vector3(rollDirection.x * dodgeSpeed, playerRigidBody.linearVelocity.y, rollDirection.z * dodgeSpeed);
    }

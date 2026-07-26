@@ -24,10 +24,14 @@ public class BasicPlayerFollowScript : MonoBehaviour
     public float jumpArcHeight = 0.5f;
     [Tooltip("Extra arc height per metre of horizontal distance.")]
     public float jumpArcPerMeter = 0.12f;
+    [Tooltip("A downward link deeper than this plays the fall pose during the descent; shallower drops read as a quick hop. Keep below hardLandDropHeight so a big drop still shows the fall before the crouch landing.")]
+    public float fallStartDrop = 1.2f;
     [Tooltip("A downward link deeper than this plays the hard-landing (crouch) animation on touchdown; shallower drops use the soft fall.")]
     public float hardLandDropHeight = 2f;
     [Tooltip("Seconds the companion is frozen in place after a hard landing while the crouch recovery plays. Set near the hard-landing clip length.")]
     public float hardLandLockTime = 1.2f;
+    [Tooltip("Seconds the companion is frozen after a soft-fall landing so it can't slide around while the landing recovery plays. Set near the landing portion of the fall clip that plays after touchdown. Hard landings use hardLandLockTime instead.")]
+    public float fallLockTime = 0.5f;
 
     [Header("Animation")]
     public Animator animator;
@@ -237,11 +241,19 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
         OffMeshLinkData link = agent.currentOffMeshLinkData;
         Vector3 start = transform.position;
-        // link.endPos sits on the navmesh surface, but the agent normally rests
-        // baseOffset above it (transform.position already includes that offset).
-        // Add it back to the landing point or the companion lands baseOffset units
-        // into the floor and pops out when CompleteOffMeshLink snaps it up.
-        Vector3 end = link.endPos + Vector3.up * agent.baseOffset;
+        // A bidirectional NavMeshLink does not reliably swap startPos/endPos to match
+        // the direction we cross it, so link.endPos can be the side we're already
+        // standing on (this is what breaks DOWNward jumps: end == start, drop == 0, so
+        // we hop in place instead of falling). Pick whichever endpoint is farther from
+        // us as the real destination — correct going up or down.
+        Vector3 destination = Vector3.Distance(start, link.startPos) > Vector3.Distance(start, link.endPos)
+            ? link.startPos
+            : link.endPos;
+        // That endpoint sits on the navmesh surface, but the agent normally rests
+        // baseOffset above it (transform.position already includes that offset). Add it
+        // back or the companion lands baseOffset units into the floor and pops out when
+        // CompleteOffMeshLink snaps it up.
+        Vector3 end = destination + Vector3.up * agent.baseOffset;
 
         // Size the hop to the actual link: a short step gets a small, quick hop
         // while a wide gap gets a longer, higher arc. Horizontal distance drives
@@ -253,6 +265,11 @@ public class BasicPlayerFollowScript : MonoBehaviour
         // How far we drop (0 when going up or level). Drives the fall/hard-land
         // choice and stretches a tall drop out so the fall actually reads.
         float drop = Mathf.Max(0f, -rise);
+
+        // TEMP debug: log the real drop per link so we can confirm it matches the
+        // visual ledge height — i.e. that a "low" ledge isn't computing a big drop
+        // and mis-firing the fall/crouch. Remove once the tuning is dialled in.
+        Debug.Log($"[Companion Jump] {name}: start.y={start.y:F2} end.y={end.y:F2} rise={rise:F2} drop={drop:F2} horiz={horizontalDistance:F2} | linkStart.y={link.startPos.y:F2} linkEnd.y={link.endPos.y:F2} -> {(drop > fallStartDrop ? "FALL" : "HOP")}, hardLand={drop > hardLandDropHeight}", this);
 
         float duration = jumpBaseDuration + jumpTimePerMeter * (horizontalDistance + drop);
 
@@ -269,9 +286,10 @@ public class BasicPlayerFollowScript : MonoBehaviour
         if (animator != null)
         {
             animator.speed = 1f; // play the clip at its authored rate, not the scaled run rate
-            // Fall pose while descending; a plain hop going up/level. The crouch
-            // hard-landing is punched in on touchdown below for deep drops.
-            animator.SetTrigger(drop > 0.3f ? FallHash : JumpHash);
+            // Fall pose for a real drop (deeper than fallStartDrop); a quick hop for
+            // small step-downs or going up/level. The crouch hard-landing is punched
+            // in on touchdown below for deep drops.
+            animator.SetTrigger(drop > fallStartDrop ? FallHash : JumpHash);
         }
 
         float elapsed = 0f;
@@ -300,13 +318,19 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
         agent.CompleteOffMeshLink();
 
-        // Freeze in place through the crouch recovery so it can't slide off while
-        // the hard landing plays, then hand control back.
-        if (hardLanding)
+        // Freeze through the landing recovery so the companion can't slide around
+        // while the fall/crouch clip finishes, then hand control back. A hard landing
+        // holds for the longer crouch recovery; a soft fall holds for its shorter
+        // landing; a plain hop has no recovery to wait on. isJumping stays true for the
+        // whole wait, so Update() keeps bailing and won't resume following meanwhile.
+        float landingLock = hardLanding ? hardLandLockTime
+                          : drop > fallStartDrop ? fallLockTime
+                          : 0f;
+        if (landingLock > 0f)
         {
             agent.isStopped = true;
             agent.velocity = Vector3.zero;
-            yield return new WaitForSeconds(hardLandLockTime);
+            yield return new WaitForSeconds(landingLock);
             agent.isStopped = false;
         }
 
