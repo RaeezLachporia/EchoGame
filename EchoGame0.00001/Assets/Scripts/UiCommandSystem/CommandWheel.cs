@@ -45,6 +45,8 @@ public class CommandWheel : MonoBehaviour
     [SerializeField] private Image iconLeft;
     [Tooltip("The single highlight wedge. Author the sprite pointing at the TOP slice — the wheel rotates it to the other three.")]
     [SerializeField] private Image highlightImage;
+    [Tooltip("Stand-in for a slice whose companion or ability has no icon assigned yet. Wire this to wheel_slot_default so a half-built companion still reads as an occupied slot instead of a blank one.")]
+    [SerializeField] private Sprite placeholderIcon;
 
     [Header("Highlight Tints")]
     [Tooltip("Highlight tint while a slice is selected. White = the sprite's own colours.")]
@@ -125,6 +127,7 @@ public class CommandWheel : MonoBehaviour
     void Start()
     {
         SetState(WheelState.Idle);
+        AuditCompanionIcons();
     }
 
     void Update()
@@ -332,17 +335,22 @@ public class CommandWheel : MonoBehaviour
     }
 
     // Main wheel: each slice shows the portrait of the companion in that slot.
-    // No portrait (or no companion) → the icon hides and the background's own
-    // slice art shows through.
+    // A slot holding a companion whose portrait isn't authored yet falls back to
+    // the placeholder, so the slice still reads as occupied. Only a genuinely
+    // empty slot hides its icon and lets the background's own slice art through.
     private void ShowCompanionIcons()
     {
         for (int i = 0; i < icons.Length; i++)
-            SetIcon(icons[i], GetPortrait(GetCompanionInSlot(i + 1)));
+        {
+            CompanionCommand companion = GetCompanionInSlot(i + 1);
+            SetIcon(icons[i], companion != null ? Resolve(GetPortrait(companion)) : null);
+        }
     }
 
     // Companion wheel: slices show the selected companion's ability icons in
     // component order — the same order DispatchSlice fires them, so the picture
-    // and the dispatch can never disagree.
+    // and the dispatch can never disagree. An ability with no icon yet still
+    // shows the placeholder, because the slice is live and will fire.
     private void ShowAbilityIcons()
     {
         CompanionCommand companion = GetSelectedCompanion();
@@ -351,7 +359,14 @@ public class CommandWheel : MonoBehaviour
             : System.Array.Empty<CompanionAbility>();
 
         for (int i = 0; i < icons.Length; i++)
-            SetIcon(icons[i], i < abilities.Length ? abilities[i].icon : null);
+            SetIcon(icons[i], i < abilities.Length ? Resolve(abilities[i].icon) : null);
+    }
+
+    // Null sprite on a live slice → placeholder. Written out rather than using ??
+    // because Unity's overloaded == doesn't play well with null-coalescing.
+    private Sprite Resolve(Sprite sprite)
+    {
+        return sprite != null ? sprite : placeholderIcon;
     }
 
     private static void SetIcon(Image image, Sprite sprite)
@@ -363,9 +378,50 @@ public class CommandWheel : MonoBehaviour
 
     private static Sprite GetPortrait(CompanionCommand companion)
     {
+        Comapnion body = GetBody(companion);
+        return body != null && body.Definition != null ? body.Definition.portrait : null;
+    }
+
+    // The Comapnion body normally sits on the same GameObject as the command
+    // script, but fall back to a child search so a prefab that nests its rig
+    // differently still resolves to a definition.
+    private static Comapnion GetBody(CompanionCommand companion)
+    {
         if (companion == null) return null;
         Comapnion body = companion.GetComponent<Comapnion>();
-        return body != null && body.Definition != null ? body.Definition.portrait : null;
+        return body != null ? body : companion.GetComponentInChildren<Comapnion>();
+    }
+
+    // A missing portrait used to make the slice vanish, which looks exactly like
+    // "the wheel is broken". Name the slot and the missing link once at startup
+    // so the empty slice is traceable to the asset that needs filling in.
+    private void AuditCompanionIcons()
+    {
+        for (int slot = 1; slot <= 4; slot++)
+        {
+            CompanionCommand companion = GetCompanionInSlot(slot);
+            if (companion == null)
+            {
+                Debug.LogWarning($"[CommandWheel] Slot {slot} has no companion assigned — that slice stays empty.", this);
+                continue;
+            }
+
+            Comapnion body = GetBody(companion);
+            if (body == null)
+            {
+                Debug.LogWarning($"[CommandWheel] Slot {slot} ('{companion.name}') has no Comapnion component, so the wheel can't reach a definition or portrait.", companion);
+                continue;
+            }
+
+            if (body.Definition == null)
+            {
+                Debug.LogWarning($"[CommandWheel] Slot {slot} ('{companion.name}') has no Companion Definition assigned on its Comapnion component — no portrait to show.", companion);
+                continue;
+            }
+
+            if (body.Definition.portrait == null)
+                Debug.LogWarning($"[CommandWheel] Slot {slot} ('{companion.name}') uses definition '{body.Definition.name}', which has an empty Portrait field. Drag a sprite into that asset's Portrait to give the slice an icon.", body.Definition);
+        }
     }
 
     // slice: 0 = TOP, 1 = RIGHT, 2 = BOTTOM, 3 = LEFT. The wedge sprite is
