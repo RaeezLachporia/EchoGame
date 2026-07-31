@@ -1099,7 +1099,7 @@ MonoBehaviour:
   m_EndTransform: {fileID: 0}
   m_Activated: 1
   m_Width: 5.83
-  m_CostModifier: 1
+  m_CostModifier: 2
   m_IsOverridingCost: 0
   m_Bidirectional: 1
   m_AutoUpdatePosition: 0
@@ -2558,7 +2558,7 @@ MonoBehaviour:
   m_OverrideTileSize: 0
   m_TileSize: 256
   m_OverrideVoxelSize: 0
-  m_VoxelSize: 0.1
+  m_VoxelSize: 0.08
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: f6cebeb0ea54ab9408558df455810591, type: 2}
   m_BuildHeightMesh: 0
@@ -3343,6 +3343,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5846980992440594692, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
+      propertyPath: maxHealth
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 5846980992440594692, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
+      propertyPath: currentHealth
+      value: 100
+      objectReference: {fileID: 0}
     - target: {fileID: 8316288702793715424, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
       propertyPath: player
       value: 
@@ -3753,7 +3761,7 @@ MonoBehaviour:
   moveSpeed: 4
   rotationSpeed: 10
   moveAnimSpeed: 4
-  animator: {fileID: 0}
+  animator: {fileID: 8711830233340729605}
   healTrigger: Heal
   animationDampTime: 0.1
   logHealing: 1
@@ -3771,6 +3779,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AttackAbility
   abilityName: Attack
   icon: {fileID: 0}
+--- !u!95 &8711830233340729605 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 679693939616881183, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+  m_PrefabInstance: {fileID: 5735871795900416429}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

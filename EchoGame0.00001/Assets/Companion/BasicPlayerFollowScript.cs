@@ -94,6 +94,17 @@ public class BasicPlayerFollowScript : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         agent.updateRotation = false;
         agent.autoTraverseOffMeshLink = false;
+
+        // Distinct avoidance priority per companion, keyed off the formation slot.
+        // NavMeshAgents that share an avoidancePriority avoid each other symmetrically
+        // and deadlock at any bottleneck — most visibly the narrow entry to a NavMesh
+        // link, where two companions each yield to the other and NEITHER ever plants
+        // itself on the link to trigger the jump. A distinct priority makes the
+        // lower-priority one give way fully so the other can claim the link and cross.
+        // (Lower number = higher priority.) This means a UNIQUE formationSlot per
+        // companion now matters for link traversal, not just for spacing.
+        agent.avoidancePriority = 50 + Mathf.Clamp(formationSlot, 0, SlotDirections.Length - 1);
+
         command = GetComponent<CompanionCommand>();
         abilities = GetComponents<CompanionAbility>();
 

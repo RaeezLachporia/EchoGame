@@ -18,4 +18,4 @@ MonoBehaviour:
   description: Zara controls the tempos of fights
   portrait: {fileID: 0}
   prefab: {fileID: 8360806178730695964, guid: 844c9db9255124e4cbb714f8048e9f40, type: 3}
-  maxHealth: 250
+  maxHealth: 100
