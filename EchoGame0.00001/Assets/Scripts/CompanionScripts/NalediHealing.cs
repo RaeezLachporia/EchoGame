@@ -23,8 +23,8 @@ public class NalediHealing : CompanionAbility
     [SerializeField] private float healAmount = 30f;
     [Tooltip("Seconds she has to wait between heals.")]
     [SerializeField] private float healCooldown = 4f;
-    [Tooltip("How close she needs to stand to the ally to heal them.")]
-    [SerializeField] private float healRange = 2.5f;
+    [Tooltip("How close she walks to stand next to the ally before healing — she runs right up to them instead of healing from across the gap. Smaller = closer. Keep it under her follow distance or she'll heal without stepping in.")]
+    [SerializeField] private float approachDistance = 1.2f;
     [Tooltip("How long one heal takes. She stands still while casting and the health arrives at the end.")]
     [SerializeField] private float castDuration = 0.8f;
 
@@ -137,7 +137,7 @@ public class NalediHealing : CompanionAbility
         Vector3 toAlly = targetTransform.position - transform.position;
         toAlly.y = 0f;
 
-        if (toAlly.magnitude > healRange)
+        if (toAlly.magnitude > approachDistance)
         {
             agent.speed = moveSpeed;
             agent.SetDestination(targetTransform.position);
