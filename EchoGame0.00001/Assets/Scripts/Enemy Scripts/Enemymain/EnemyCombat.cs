@@ -62,8 +62,8 @@ public class EnemyCombat : MonoBehaviour
         if (cooldownRemaining > 0f) return;
 
         // Attacks belong to the Combat state. Alert stalks without swinging and
-        // Patrol obviously doesn't fight — so until the Combat state is wired up,
-        // no enemy initiates attacks. That's intentional staging, not a bug.
+        // Patrol obviously doesn't fight — the brain escalates Alert -> Combat after
+        // the player stays in sight for its timeToEngage, and only then do we swing.
         if (brain != null && brain.State != EnemyFollowPlayer.EnemyState.Combat) return;
 
         if (!TargetInHitbox()) return;

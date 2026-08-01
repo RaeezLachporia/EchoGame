@@ -9,8 +9,10 @@ public class EnemyFollowPlayer : MonoBehaviour
     //   Patrol — EnemyPatrolling drives the agent; we just watch for the player.
     //   Alert  — spotted the player: stalk them (chase + last-known grip) but
     //            never swing. EnemyCombat checks this state and holds its attacks.
-    //   Combat — placeholder. Nothing transitions into it yet; attacking returns
-    //            when the combat state is built.
+    //            Escalates to Combat once the player stays in sight for timeToEngage.
+    //   Combat — committed to the fight: chase on LOS and let EnemyCombat swing.
+    //            Loses the player the same way Alert does (last-known grip, then
+    //            back to Patrol).
     // Only the PLAYER triggers Patrol -> Alert. Companions are deliberately
     // invisible to this script — they roam enough that they'd trip alerts
     // constantly and drain the tension out of sneaking. How enemies respond to
@@ -36,6 +38,10 @@ public class EnemyFollowPlayer : MonoBehaviour
     [Tooltip("Seconds after losing line of sight before Alert gives up and drops back to Patrol. During this window the enemy walks to the last known position — not the player's live position, or it would path through walls like an aimbot.")]
     [SerializeField] private float giveUpDelay = 2f;
 
+    [Header("Combat")]
+    [Tooltip("Seconds the player must stay continuously in sight while Alert before the enemy commits to Combat and starts attacking. This is the 'spotted in the cone for this long' engage delay. A blink out of sight resets it.")]
+    [SerializeField] private float timeToEngage = 1.5f;
+
     [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField] private float animationDampTime = 0.1f;
@@ -48,9 +54,12 @@ public class EnemyFollowPlayer : MonoBehaviour
 
     private Transform player;
     private Vector3 lastKnownPosition;
-    // Valid only while State == Alert && !PlayerInSight: the Time.time at which
-    // Alert gives up if sight isn't reacquired first.
+    // Valid only while (Alert or Combat) && !PlayerInSight: the Time.time at which
+    // the last-known grip gives up if sight isn't reacquired first.
     private float giveUpAt;
+    // Seconds the player has been continuously in sight during Alert. Escalates to
+    // Combat at timeToEngage; reset whenever sight breaks or Alert re-enters.
+    private float continuousSightTime;
     private EnemyCombat combat;
     private NavMeshAgent agent;
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
@@ -135,6 +144,7 @@ public class EnemyFollowPlayer : MonoBehaviour
         stateDisplay = EnemyState.Patrol;
         stateEnteredAt = Time.time;
         PlayerInSight = false;
+        continuousSightTime = 0f;
     }
 
     void Start()
@@ -166,7 +176,7 @@ public class EnemyFollowPlayer : MonoBehaviour
             {
                 case EnemyState.Patrol: PatrolTick(); break;
                 case EnemyState.Alert: AlertTick(); break;
-                // Combat tick arrives with the combat-state work.
+                case EnemyState.Combat: CombatTick(); break;
             }
             HandleRotation();
         }
@@ -188,6 +198,8 @@ public class EnemyFollowPlayer : MonoBehaviour
         SetState(EnemyState.Alert);
         PlayerInSight = true;
         lastKnownPosition = player.position;
+        // Fresh alert — the engage dwell starts counting from zero this sighting.
+        continuousSightTime = 0f;
         // Patrol left the agent on wander speed — bump to chase speed.
         agent.speed = moveSpeed;
     }
@@ -210,11 +222,65 @@ public class EnemyFollowPlayer : MonoBehaviour
             PlayerInSight = true;
             lastKnownPosition = player.position;
             agent.SetDestination(player.position);
+
+            // Commit to Combat once the player has stayed in sight continuously for
+            // timeToEngage — stalking turns into a fight. A blink out of sight resets
+            // the timer (else branch), so brief cover doesn't count toward engaging.
+            continuousSightTime += Time.deltaTime;
+            if (continuousSightTime >= timeToEngage)
+            {
+                EnterCombat();
+                return;
+            }
         }
         else
         {
+            continuousSightTime = 0f;
+
             // Arm the give-up timer once, on the frame sight breaks — not every
             // frame after, or the timer would never expire.
+            if (PlayerInSight) giveUpAt = Time.time + giveUpDelay;
+            PlayerInSight = false;
+
+            if (Time.time < giveUpAt)
+            {
+                agent.SetDestination(lastKnownPosition);
+            }
+            else
+            {
+                ReturnToPatrol();
+            }
+        }
+    }
+
+    private void EnterCombat()
+    {
+        SetState(EnemyState.Combat);
+        PlayerInSight = true;
+        lastKnownPosition = player.position;
+    }
+
+    // Combat: committed to the fight. Keep chasing so EnemyCombat can land its
+    // swings (it only attacks while State == Combat). Losing sight grips the last
+    // known position for giveUpDelay — the same forgiving window as Alert — then
+    // drops back to Patrol. No FOV check: a committed enemy tracks on LOS alone.
+    private void CombatTick()
+    {
+        if (player == null)
+        {
+            ReturnToPatrol();
+            return;
+        }
+
+        bool inSight = InRange(player) && HasLineOfSight(player);
+        if (inSight)
+        {
+            PlayerInSight = true;
+            lastKnownPosition = player.position;
+            agent.SetDestination(player.position);
+        }
+        else
+        {
             if (PlayerInSight) giveUpAt = Time.time + giveUpDelay;
             PlayerInSight = false;
 
@@ -269,7 +335,8 @@ public class EnemyFollowPlayer : MonoBehaviour
         // Locked on: pivot to face the player even while the body is still
         // moving — otherwise the agent's loop-around-stoppingDistance path keeps
         // velocity nonzero and the enemy circles while staring at the path tangent.
-        if (State == EnemyState.Alert && PlayerInSight && player != null)
+        // Combat wants the same facing so swings land on the player, not the tangent.
+        if ((State == EnemyState.Alert || State == EnemyState.Combat) && PlayerInSight && player != null)
         {
             FaceTarget(player.position);
             return;
@@ -348,7 +415,7 @@ public class EnemyFollowPlayer : MonoBehaviour
         Gizmos.DrawLine(origin, origin + leftEdge);
         Gizmos.DrawLine(origin, origin + rightEdge);
 
-        if (State == EnemyState.Alert && player != null)
+        if ((State == EnemyState.Alert || State == EnemyState.Combat) && player != null)
         {
             // Red = live sight line, orange = walking the last-known grip.
             Gizmos.color = PlayerInSight ? Color.red : new Color(1f, 0.55f, 0.1f);
