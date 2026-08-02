@@ -15,6 +15,7 @@ public class CommandWheel : MonoBehaviour
         CompanionHighlighted,
         CompanionWheel,
         AllyWheel,
+        EnemyCycle,
         AttackHighlighted,
     }
 
@@ -53,8 +54,12 @@ public class CommandWheel : MonoBehaviour
     [Header("Ally Targeting")]
     [Tooltip("The player character. NOT a slice on the ally wheel — the four slices are companion1-4. The player is healed by the dedicated heal-player button instead. Auto-found by the 'Player' tag if left empty.")]
     [SerializeField] private Transform playerTarget;
-    [Tooltip("Reusable message line for the wheel — the CODE writes what shows here (e.g. \"Press Y to heal player\" on the ally wheel; buff and other prompts reuse it later). Drag a TMP text; leave empty to skip. Stays hidden unless a message is set.")]
+    [Tooltip("Reusable message line for the wheel — the CODE writes what shows here (e.g. \"Press Y to heal player\" on the ally wheel, the confirm prompt on the enemy cycle). Drag a TMP text; leave empty to skip. Stays hidden unless a message is set.")]
     [SerializeField] private TMP_Text wheelMessageLabel;
+
+    [Header("Enemy Targeting")]
+    [Tooltip("How far out the enemy-cycle layer looks for enemies to debuff. Matches PlayerLockOn's lock range by default.")]
+    [SerializeField] private float enemyCycleRange = 25f;
 
     [Header("Highlight Tints")]
     [Tooltip("Highlight tint while a slice is selected. White = the sprite's own colours.")]
@@ -75,7 +80,7 @@ public class CommandWheel : MonoBehaviour
     private InputAction dpadRightAction;
     private InputAction dpadDownAction;
     private InputAction dpadLeftAction;
-    private InputAction healPlayerAction;
+    private InputAction confirmAction;
 
     // Which control scheme the player last used, so the heal-player prompt can show
     // the right button (Y on gamepad, H on keyboard).
@@ -92,6 +97,11 @@ public class CommandWheel : MonoBehaviour
     private CompanionAbility pendingAbility;
     private readonly Transform[] allyTargets = new Transform[4];
     private readonly Sprite[] allyIcons = new Sprite[4];
+
+    // Enemy cycle (Layer 3b): the nearby enemies the player is cycling through with
+    // the d-pad, and which one is currently highlighted.
+    private readonly System.Collections.Generic.List<Transform> cycleEnemies = new System.Collections.Generic.List<Transform>();
+    private int cycleIndex;
 
     void Awake()
     {
@@ -112,12 +122,15 @@ public class CommandWheel : MonoBehaviour
         dpadLeftAction.AddBinding("<Gamepad>/dpad/left");
         dpadLeftAction.AddBinding("<Keyboard>/leftArrow");
 
-        // Dedicated "heal the player" button for the ally wheel — the player isn't a
-        // wheel slice. buttonNorth (Y) and 'H' are free: Jump = A, Dodge = B,
-        // Attack = RB / left-mouse, so this won't double-fire while aiming.
-        healPlayerAction = new InputAction("HealPlayer", InputActionType.Button);
-        healPlayerAction.AddBinding("<Gamepad>/buttonNorth");
-        healPlayerAction.AddBinding("<Keyboard>/h");
+        // One "commit" button, meaning whatever the current picker layer needs:
+        // on the ally wheel it heals the PLAYER (who isn't a wheel slice), on the
+        // enemy cycle it CONFIRMS the highlighted enemy. The states are mutually
+        // exclusive and the message line says which, so they can share a button.
+        // buttonNorth (Y) and 'H' are free: Jump = A, Dodge = B, Attack = RB/LMB,
+        // so this never double-fires while aiming.
+        confirmAction = new InputAction("WheelConfirm", InputActionType.Button);
+        confirmAction.AddBinding("<Gamepad>/buttonNorth");
+        confirmAction.AddBinding("<Keyboard>/h");
 
         if (aim == null) aim = FindObjectOfType<PlayerAimZoom>();
         if (lockOn == null) lockOn = FindObjectOfType<PlayerLockOn>();
@@ -133,12 +146,12 @@ public class CommandWheel : MonoBehaviour
         dpadRightAction.performed += OnDpadRight;
         dpadDownAction.performed += OnDpadDown;
         dpadLeftAction.performed += OnDpadLeft;
-        healPlayerAction.performed += OnHealPlayer;
+        confirmAction.performed += OnConfirm;
         dpadUpAction.Enable();
         dpadRightAction.Enable();
         dpadDownAction.Enable();
         dpadLeftAction.Enable();
-        healPlayerAction.Enable();
+        confirmAction.Enable();
     }
 
     void OnDisable()
@@ -147,15 +160,17 @@ public class CommandWheel : MonoBehaviour
         dpadRightAction.performed -= OnDpadRight;
         dpadDownAction.performed -= OnDpadDown;
         dpadLeftAction.performed -= OnDpadLeft;
-        healPlayerAction.performed -= OnHealPlayer;
+        confirmAction.performed -= OnConfirm;
         dpadUpAction.Disable();
         dpadRightAction.Disable();
         dpadDownAction.Disable();
         dpadLeftAction.Disable();
-        healPlayerAction.Disable();
+        confirmAction.Disable();
 
-        // If the wheel gets disabled mid-ally-wheel, don't leave the message on screen.
+        // If the wheel gets disabled mid-pick, don't leave the message on screen or
+        // the crosshair stuck highlighting a cycled enemy.
         HideWheelMessage();
+        ClearEnemyCycle();
     }
 
     void Start()
@@ -173,6 +188,25 @@ public class CommandWheel : MonoBehaviour
         {
             SetState(WheelState.Idle);
             return;
+        }
+
+        // The highlighted enemy died or got pooled while the player was choosing —
+        // drop it from the list and move on rather than confirm onto a corpse.
+        if (state == WheelState.EnemyCycle)
+        {
+            Transform current = CurrentCycleEnemy;
+            if (current == null || !current.gameObject.activeInHierarchy)
+            {
+                cycleEnemies.RemoveAll(t => t == null || !t.gameObject.activeInHierarchy);
+                if (cycleEnemies.Count == 0)
+                {
+                    if (logDispatch) Debug.Log("[CommandWheel] No enemies left to target — closing the picker.");
+                    SetState(WheelState.Idle);
+                    return;
+                }
+                cycleIndex %= cycleEnemies.Count;
+                HighlightCycledEnemy();
+            }
         }
 
         if (state == WheelState.CompanionHighlighted)
@@ -226,6 +260,10 @@ public class CommandWheel : MonoBehaviour
         {
             DispatchAllyTarget(1);
         }
+        else if (state == WheelState.EnemyCycle)
+        {
+            CycleEnemy(1);
+        }
     }
 
     private void OnDpadDown(InputAction.CallbackContext ctx)
@@ -264,13 +302,21 @@ public class CommandWheel : MonoBehaviour
         {
             DispatchAllyTarget(3);
         }
+        else if (state == WheelState.EnemyCycle)
+        {
+            CycleEnemy(-1);
+        }
     }
 
-    private void OnHealPlayer(InputAction.CallbackContext ctx)
+    // One button, meaning whatever the current picker needs — the message line tells
+    // the player which. Ally wheel: heal the player. Enemy cycle: confirm the target.
+    private void OnConfirm(InputAction.CallbackContext ctx)
     {
         RecordInputDevice(ctx);
         if (!IsWheelEngaged()) return;
+
         if (state == WheelState.AllyWheel) DispatchPlayerHeal();
+        else if (state == WheelState.EnemyCycle) ConfirmEnemyTarget();
     }
 
     // Track which control scheme drove the last wheel input, so the heal-player
@@ -298,7 +344,7 @@ public class CommandWheel : MonoBehaviour
     }
 
     // The dedicated player button, glyph chosen by the last input used (Y on gamepad,
-    // H on keyboard) — matches the healPlayerAction bindings.
+    // H on keyboard) — matches the confirmAction bindings.
     private string PlayerButtonLabel => lastInputWasGamepad ? "Y" : "H";
 
     // "Press Y to heal player" / "...to buff player" — the verb comes from the active
@@ -307,6 +353,15 @@ public class CommandWheel : MonoBehaviour
     {
         string verb = pendingAbility != null ? pendingAbility.abilityName.ToLower() : "heal";
         return $"Press {PlayerButtonLabel} to {verb} player";
+    }
+
+    // Enemy cycle prompt: which target you're on, how to switch, how to commit.
+    private string BuildEnemyCycleMessage()
+    {
+        Transform enemy = CurrentCycleEnemy;
+        string who = enemy != null ? enemy.name : "no target";
+        string verb = pendingAbility != null ? pendingAbility.abilityName.ToLower() : "use";
+        return $"{who}  ({cycleIndex + 1}/{cycleEnemies.Count})\nD-pad left/right to switch  ·  Press {PlayerButtonLabel} to {verb}";
     }
 
     private bool IsWheelEngaged()
@@ -370,10 +425,9 @@ public class CommandWheel : MonoBehaviour
                 OpenAllyWheel(ability);
                 break;
 
-            // Debuff: the enemy-cycle reticle (Layer 3b) is a later step, and nothing
-            // declares EnemyPicker yet — note it and stay on the ability wheel for now.
+            // Debuff: open the enemy cycle so the player picks which enemy to mark.
             case AbilityTargetKind.EnemyPicker:
-                if (logDispatch) Debug.Log($"[CommandWheel] {ability.abilityName} wants an enemy picker — not built yet, ignoring.");
+                OpenEnemyCycle(ability);
                 break;
 
             // Attack and anything else: fire immediately on the reticle/lock target.
@@ -492,6 +546,111 @@ public class CommandWheel : MonoBehaviour
         return false;
     }
 
+    // Layer 3b. Stash the ability, gather nearby enemies, and highlight the closest
+    // one. The player cycles with d-pad left/right and commits with the confirm
+    // button. Nothing in range → stay put rather than open an empty picker.
+    private void OpenEnemyCycle(CompanionAbility ability)
+    {
+        BuildEnemyCycleList();
+        if (cycleEnemies.Count == 0)
+        {
+            if (logDispatch) Debug.Log($"[CommandWheel] {ability.abilityName}: no enemies in range to target.");
+            return;
+        }
+
+        pendingAbility = ability;
+        cycleIndex = 0;
+        SetState(WheelState.EnemyCycle);
+        HighlightCycledEnemy();
+    }
+
+    // Nearby enemies, nearest first, so the cycle starts on the most likely target
+    // and stepping through it feels ordered rather than random.
+    private void BuildEnemyCycleList()
+    {
+        cycleEnemies.Clear();
+
+        Transform origin = ResolvePlayerTarget();
+        Vector3 from = origin != null ? origin.position : transform.position;
+
+        // Same sweep PlayerLockOn uses — enemy counts are small and this runs once
+        // per press, so a find-by-type is cheap enough.
+        EnemyHighlight[] found = FindObjectsOfType<EnemyHighlight>();
+        for (int i = 0; i < found.Length; i++)
+        {
+            Transform t = found[i] != null ? found[i].transform : null;
+            if (t == null || !t.gameObject.activeInHierarchy) continue;
+            if ((t.position - from).sqrMagnitude > enemyCycleRange * enemyCycleRange) continue;
+            cycleEnemies.Add(t);
+        }
+
+        cycleEnemies.Sort((a, b) =>
+            (a.position - from).sqrMagnitude.CompareTo((b.position - from).sqrMagnitude));
+    }
+
+    // Step through the list, wrapping at both ends.
+    private void CycleEnemy(int step)
+    {
+        if (cycleEnemies.Count == 0) return;
+        cycleIndex = (cycleIndex + step + cycleEnemies.Count) % cycleEnemies.Count;
+        HighlightCycledEnemy();
+    }
+
+    private Transform CurrentCycleEnemy =>
+        cycleIndex >= 0 && cycleIndex < cycleEnemies.Count ? cycleEnemies[cycleIndex] : null;
+
+    // Drive the crosshair's LockOverride so the EXISTING red highlight shows which
+    // enemy is selected — no new targeting visual needed.
+    private void HighlightCycledEnemy()
+    {
+        Transform enemy = CurrentCycleEnemy;
+        if (crosshair != null) crosshair.LockOverride = enemy;
+        ShowWheelMessage(BuildEnemyCycleMessage());
+        if (logDispatch && enemy != null)
+            Debug.Log($"[CommandWheel] Target {cycleIndex + 1}/{cycleEnemies.Count}: {enemy.name}");
+    }
+
+    // Fire the pending ability on the highlighted enemy.
+    private void ConfirmEnemyTarget()
+    {
+        if (pendingAbility == null) { SetState(WheelState.Idle); return; }
+
+        Transform enemy = CurrentCycleEnemy;
+        if (enemy == null)
+        {
+            if (logDispatch) Debug.Log("[CommandWheel] No enemy highlighted to confirm.");
+            return;
+        }
+
+        // Clear before firing so the confirm flash isn't fighting the cycle state.
+        CompanionAbility ability = pendingAbility;
+        if (ability.TryActivate(enemy))
+        {
+            pendingAbility = null;
+            if (logDispatch)
+            {
+                CompanionCommand who = GetSelectedCompanion();
+                Debug.Log($"[CommandWheel] {(who != null ? who.name : "?")} → {ability.abilityName} on {enemy.name}");
+            }
+            SetState(WheelState.Idle);
+        }
+        else if (logDispatch)
+        {
+            Debug.Log($"[CommandWheel] {ability.abilityName} refused {enemy.name} (on cooldown / invalid) — still picking.");
+        }
+    }
+
+    // Drop the forced highlight. Restore whatever lock-on had, if anything — the
+    // cycle borrows LockOverride, so nulling it blindly would silently break an
+    // active lock the player still thinks they have.
+    private void ClearEnemyCycle()
+    {
+        cycleEnemies.Clear();
+        cycleIndex = 0;
+        if (crosshair == null) return;
+        crosshair.LockOverride = lockOn != null && lockOn.IsLocked ? lockOn.LockedTarget : null;
+    }
+
     // Cache the player's transform. Serialized field wins; otherwise fall back to
     // the 'Player' tag so the wheel works with no manual wiring.
     private Transform ResolvePlayerTarget()
@@ -539,6 +698,11 @@ public class CommandWheel : MonoBehaviour
 
     private void SetState(WheelState next)
     {
+        // Leaving the enemy cycle: hand the crosshair back before switching, so the
+        // borrowed LockOverride highlight never outlives the picker.
+        if (state == WheelState.EnemyCycle && next != WheelState.EnemyCycle)
+            ClearEnemyCycle();
+
         state = next;
 
         switch (next)
@@ -566,17 +730,25 @@ public class CommandWheel : MonoBehaviour
                 HideHighlight();
                 break;
 
+            case WheelState.EnemyCycle:
+                // Targeting happens out in the world (the highlighted enemy), not on
+                // the wheel — blank the slices so they don't read as pickable.
+                ClearIcons();
+                HideHighlight();
+                break;
+
             case WheelState.AttackHighlighted:
                 // Icons stay as they are — only the confirm flash changes.
                 ShowHighlight(confirmedSlice, confirmTint);
                 break;
         }
 
-        // The player-button prompt belongs to the ally wheel only — every transition
-        // runs through here, so it can never be left stranded on. The code writes the
-        // message (device-aware button + the ability's verb), so the same line can be
-        // reused for buff and other prompts later.
+        // Picker prompts belong to their picker state only — every transition runs
+        // through here, so a message can never be left stranded on. The code writes
+        // the text (device-aware button + the ability's verb), so the same line
+        // serves heal, buff, debuff, and whatever comes next.
         if (next == WheelState.AllyWheel) ShowWheelMessage(BuildPlayerActionMessage());
+        else if (next == WheelState.EnemyCycle) ShowWheelMessage(BuildEnemyCycleMessage());
         else HideWheelMessage();
     }
 
@@ -591,6 +763,12 @@ public class CommandWheel : MonoBehaviour
             CompanionCommand companion = GetCompanionInSlot(i + 1);
             SetIcon(icons[i], companion != null ? Resolve(GetPortrait(companion)) : null);
         }
+    }
+
+    private void ClearIcons()
+    {
+        for (int i = 0; i < icons.Length; i++)
+            SetIcon(icons[i], null);
     }
 
     // Companion wheel: slices show the selected companion's ability icons in

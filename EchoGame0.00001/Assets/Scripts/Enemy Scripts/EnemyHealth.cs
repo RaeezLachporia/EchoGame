@@ -10,6 +10,10 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     [Header("UI (optional)")]
     [SerializeField] private Slider healthSlider;
 
+    [Header("Debug")]
+    [Tooltip("Log every hit this enemy takes, showing whether a debuff amplified it. Handy for confirming the debuff actually changes incoming damage.")]
+    [SerializeField] private bool logDamage = true;
+
     private EnemyFollowPlayer follow;
     private bool isDead;
 
@@ -41,7 +45,23 @@ public class EnemyHealth : MonoBehaviour, IDamageable
         // the pool's collectionCheck throws on the second.
         if (isDead) return;
 
-        currentHealth = Mathf.Max(0f, currentHealth - damage);
+        // Every attacker funnels through here — player swings, companion attack
+        // boxes, and companion direct hits — so scaling the damage at this one
+        // point makes a debuff apply to all of them without touching any of them.
+        float incoming = damage;
+        EnemyDebuff debuff = GetComponent<EnemyDebuff>();
+        if (debuff != null && debuff.Multiplier > 1f)
+        {
+            incoming = damage * debuff.Multiplier;
+            if (logDamage)
+                Debug.Log($"[EnemyHealth] {name} DEBUFFED hit: {damage} x{debuff.Multiplier:F2} = {incoming} damage ({debuff.SecondsRemaining:F1}s of debuff left).", this);
+        }
+        else if (logDamage)
+        {
+            Debug.Log($"[EnemyHealth] {name} normal hit: {incoming} damage.", this);
+        }
+
+        currentHealth = Mathf.Max(0f, currentHealth - incoming);
         if (healthSlider != null) healthSlider.value = currentHealth;
 
         if (currentHealth <= 0f)

@@ -3504,6 +3504,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4674214349053217189, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6115972589266347401}
+    - targetCorrespondingSourceObject: {fileID: 4674214349053217189, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6115972589266347412}
   m_SourcePrefab: {fileID: 100100000, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
 --- !u!114 &3982568046616990391 stripped
 MonoBehaviour:
@@ -3712,6 +3715,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AttackAbility
   abilityName: Attack
   icon: {fileID: 21300000, guid: 27856c70335d3754d93c1bee6c403894, type: 3}
+--- !u!114 &6115972589266347412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1924117047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53aaa675207a5224ba5353d82024d14a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZaraDebuffEnemy
+  abilityName: Debuff
+  icon: {fileID: 21300000, guid: fe4681fda527dcb419b9a9aa98be31ec, type: 3}
+  damageMultiplier: 1.5
+  duration: 8
+  cooldown: 6
+  debuffTrigger: Debuff
+  animator: {fileID: 0}
+  logDebuff: 1
 --- !u!4 &7556574663755820120 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 87117431835768757, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
@@ -3906,7 +3929,7 @@ MonoBehaviour:
   scanInterval: 0.5
   healAmount: 30
   healCooldown: 4
-  healRange: 2.5
+  approachDistance: 1.2
   castDuration: 0.8
   moveSpeed: 4
   rotationSpeed: 10

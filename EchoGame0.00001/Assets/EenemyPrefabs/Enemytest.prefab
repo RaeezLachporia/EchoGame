@@ -207,6 +207,81 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e3020c13714bda4faa1d672e669632d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyUI
+--- !u!1 &1741601305984483212
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8328863974745514843}
+  - component: {fileID: 7377007219174392932}
+  - component: {fileID: 6321237560858129990}
+  m_Layer: 7
+  m_Name: StatusEffect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &8328863974745514843
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741601305984483212}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1.2404565, y: 3.0352278, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1530749590016743337}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 401, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &7377007219174392932
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741601305984483212}
+  m_CullTransparentMesh: 1
+--- !u!114 &6321237560858129990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741601305984483212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: fe4681fda527dcb419b9a9aa98be31ec, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &1979229223057543838
 GameObject:
   m_ObjectHideFlags: 0
@@ -236,7 +311,8 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 8328863974745514843}
   m_Father: {fileID: 6694574830476641955}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -476,6 +552,7 @@ GameObject:
   - component: {fileID: 4680910002911225463}
   - component: {fileID: 9159337811813846432}
   - component: {fileID: -1143872501896204309}
+  - component: {fileID: 4562317281621340916}
   m_Layer: 7
   m_Name: Enemytest
   m_TagString: Untagged
@@ -652,6 +729,7 @@ MonoBehaviour:
     m_Bits: 0
   eyeHeight: 1.62
   giveUpDelay: 2
+  timeToEngage: 1.5
   animator: {fileID: 0}
   animationDampTime: 0.1
   stateDisplay: 0
@@ -671,6 +749,7 @@ MonoBehaviour:
   maxHealth: 50
   currentHealth: 50
   healthSlider: {fileID: 6559806831206527713}
+  logDamage: 1
 --- !u!114 &6860874623474477073
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -766,6 +845,19 @@ MonoBehaviour:
   colorLerpSpeed: 8
   clipToObstacles: 1
   clipCastHeight: 0.5
+--- !u!114 &4562317281621340916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6098347863301187141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc9780c6a4bc8ca49be2b842153b4e58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyStatusIcons
+  debuffIcon: {fileID: 6321237560858129990}
 --- !u!1 &7001077129245509042
 GameObject:
   m_ObjectHideFlags: 0
