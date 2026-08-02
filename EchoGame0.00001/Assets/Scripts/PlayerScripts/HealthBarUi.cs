@@ -49,8 +49,22 @@ public class HealthBarUi : MonoBehaviour
 
     public void SetName(string displayName)
     {
-        if (nameLabel != null) nameLabel.text = displayName;
+        // An empty Name Label used to swallow the name silently, which looks exactly
+        // like "the name feature is broken". Say so once, and name the object that
+        // needs the field filled in.
+        if (nameLabel == null)
+        {
+            if (!warnedMissingNameLabel)
+            {
+                warnedMissingNameLabel = true;
+                Debug.LogWarning($"[HealthBarUi] '{name}' was asked to show the name \"{displayName}\" but its Name Label field is empty — drag the TMP text for the name into that slot.", this);
+            }
+            return;
+        }
+        nameLabel.text = displayName;
     }
+
+    private bool warnedMissingNameLabel;
 
     public void Show() { if (root != null) root.SetActive(true); }
     public void Hide() { if (root != null) root.SetActive(false); }

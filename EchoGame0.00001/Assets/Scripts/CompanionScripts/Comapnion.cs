@@ -137,6 +137,9 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
 
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
+    // The name shown on the HUD bar and the floating panel. Reads the definition's
+    // name once one is applied, and the inspector fallback until then.
+    public string DisplayName => displayName;
     // The command wheel reads this to put the companion's portrait on its slice.
     public CompanionDefinition Definition => definition;
 

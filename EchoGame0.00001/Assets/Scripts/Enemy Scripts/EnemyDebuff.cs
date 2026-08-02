@@ -9,7 +9,7 @@ using UnityEngine;
 //
 // The applying ability (e.g. ZaraDebuffEnemy) adds this at runtime, so enemy
 // prefabs need no wiring — the component removes itself once the debuff expires.
-public class EnemyDebuff : MonoBehaviour
+public class EnemyDebuff : MonoBehaviour, IStatusEffect
 {
     private float multiplier = 1f;
     private float expiresAt;
@@ -27,6 +27,10 @@ public class EnemyDebuff : MonoBehaviour
     // What incoming damage gets multiplied by while this is active.
     public float Multiplier => multiplier;
     public float SecondsRemaining => Mathf.Max(0f, expiresAt - Time.time);
+
+    // IStatusEffect — lets status-aware UI ask "is anything running on this
+    // character?" without knowing what a damage debuff is.
+    public bool IsActive => Time.time < expiresAt;
 
     // Re-applying refreshes the timer and keeps the STRONGER multiplier, so a
     // second debuff landing on the same enemy can never weaken the first one.

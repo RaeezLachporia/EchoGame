@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class InputManager : MonoBehaviour
 {
@@ -12,6 +13,9 @@ public class InputManager : MonoBehaviour
 
    public float cameraInputX;
    public float cameraInputY;
+   // Mouse delta and stick position are different units, so the camera has to
+   // scale them differently. Tracks which device last drove the Camera action.
+   public bool cameraInputIsMouse;
    
    public float moveAmount;
    public float verticalInput;
@@ -33,7 +37,11 @@ public class InputManager : MonoBehaviour
          playerControls = new PlayerControls();
 
          playerControls.PlayerMovement.Movement.performed += i => movementInput = i.ReadValue<Vector2>();
-         playerControls.PlayerMovement.Camera.performed += i => cameraInput = i.ReadValue<Vector2>();
+         playerControls.PlayerMovement.Camera.performed += i =>
+         {
+            cameraInput = i.ReadValue<Vector2>();
+            cameraInputIsMouse = i.control.device is Mouse;
+         };
          // Mouse delta never sends a "stop" value, so reset to zero when the action cancels.
          // Without this the last delta keeps being applied every frame and the camera drifts.
          playerControls.PlayerMovement.Camera.canceled += i => cameraInput = Vector2.zero;
@@ -64,8 +72,22 @@ public class InputManager : MonoBehaviour
       verticalInput = movementInput.y;
       horizontalInput = movementInput.x;
 
-      cameraInputY = cameraInput.y;
-      cameraInputX = cameraInput.x;
+      // The right stick is bound as a 2DVector of separate up/down/left/right
+      // axes, which skips the deadzone the stick control would normally apply,
+      // so a resting stick drifts the camera. Apply one here instead. A diagonal
+      // reads (1,1), so clamp the magnitude too or diagonals turn 1.4x faster.
+      Vector2 lookInput = cameraInput;
+      if (!cameraInputIsMouse)
+      {
+         const float lookDeadzone = 0.2f;
+         float magnitude = lookInput.magnitude;
+         lookInput = magnitude < lookDeadzone
+            ? Vector2.zero
+            : lookInput / magnitude * Mathf.Min((magnitude - lookDeadzone) / (1f - lookDeadzone), 1f);
+      }
+
+      cameraInputY = lookInput.y;
+      cameraInputX = lookInput.x;
 
       const float deadzone = 0.15f;
       if (Mathf.Abs(horizontalInput) < deadzone) horizontalInput = 0f;
