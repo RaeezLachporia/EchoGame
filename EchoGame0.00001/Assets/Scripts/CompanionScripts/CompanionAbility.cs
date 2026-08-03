@@ -36,6 +36,14 @@ public abstract class CompanionAbility : MonoBehaviour
     // Follow and wander check this and wait their turn.
     public virtual bool IsBusy => false;
 
+    // True while the ability is winding up a timed cast. UI (CompanionUI's cast
+    // bar) reads these generically, so any ability that gains a cast shows a bar
+    // without the UI needing to know what the ability is.
+    public virtual bool IsCasting => false;
+
+    // 0 when the cast starts, 1 when it completes.
+    public virtual float CastProgress => 0f;
+
     // For showing cooldowns on the wheel later.
     public virtual float CooldownRemaining => 0f;
 }

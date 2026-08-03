@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 // Floating panel above a companion. Goes ON the UI object itself (the panel), and
 // shows/hides it based on what the player is doing.
@@ -21,7 +23,13 @@ public class CompanionUI : MonoBehaviour
     [SerializeField] private Transform owner;
 
     [Header("Name & Health")]
-    [Tooltip("The HealthBarUi on this panel — the SAME component the on-screen HUD bars use, so the panel shows the identical name, numbers and formatting. Auto-found in this panel's children if left empty; leave the whole thing empty to skip name/health entirely.")]
+    [Tooltip("SIMPLEST OPTION: drag your name text here (e.g. CompanionName) and the companion's name from its Companion Definition asset is written into it. Leave empty if you'd rather drive everything through a HealthBarUi below.")]
+    [SerializeField] private TMP_Text nameLabel;
+    [Tooltip("Drag your health Slider here (e.g. CompanionHealth). Optional.")]
+    [SerializeField] private Slider healthSlider;
+    [Tooltip("Optional text for the numbers, shown as \"340 / 400\".")]
+    [SerializeField] private TMP_Text healthLabel;
+    [Tooltip("OPTIONAL alternative: a HealthBarUi — the same component the on-screen HUD bars use. Auto-found on this panel if present. Anything wired above is filled in as well, so you can use either or both.")]
     [SerializeField] private HealthBarUi healthBar;
 
     [Header("Show When Looked At")]
@@ -37,6 +45,18 @@ public class CompanionUI : MonoBehaviour
     [SerializeField] private LayerMask sightObstacles;
     [Tooltip("Raised off the companion's feet so the sight check aims at their body rather than the floor.")]
     [SerializeField] private float sightHeight = 1.2f;
+
+    [Header("Cast Bar")]
+    [Tooltip("The cast bar Image (Image Type = Filled). Its Fill Amount sweeps 0 to 1 over the cast, and the object is hidden while nothing is casting.")]
+    [SerializeField] private Image castFill;
+
+    [Header("Status Icon")]
+    [Tooltip("Drag the StatusEffect IMAGE from the panel here. It stays hidden until a buff or debuff is running, then swaps to the matching sprite below. Without this wired the image just sits there permanently visible.")]
+    [SerializeField] private Image statusIcon;
+    [Tooltip("Sprite shown while a BUFF is on this companion.")]
+    [SerializeField] private Sprite buffIcon;
+    [Tooltip("Sprite shown while a DEBUFF is on this companion. A debuff outranks a buff if somehow both are running.")]
+    [SerializeField] private Sprite debuffIcon;
 
     [Header("Show When Buffed / Debuffed")]
     [Tooltip("Tick so the panel appears on its own whenever a buff or debuff is running on this companion, even if the player is looking elsewhere.")]
@@ -65,6 +85,13 @@ public class CompanionUI : MonoBehaviour
     private float shownHealth = -1f;
     private float shownMaxHealth = -1f;
     private string shownName;
+    // Abilities live on the companion root; cached because they never change at
+    // runtime, unlike status effects which get added and removed constantly.
+    private CompanionAbility[] abilities;
+    // The effect currently driving the icon. Found on the slow poll, then read
+    // every frame so the radial countdown drains smoothly.
+    private IStatusEffect activeEffect;
+    private float nextCastLogAt;
 
     void Awake()
     {
@@ -79,11 +106,29 @@ public class CompanionUI : MonoBehaviour
         }
 
         if (healthBar == null) healthBar = GetComponentInChildren<HealthBarUi>(true);
+        abilities = body != null
+            ? body.GetComponentsInChildren<CompanionAbility>(true)
+            : System.Array.Empty<CompanionAbility>();
 
         // Start hidden so a companion never flashes a panel on the first frame
         // before the first visibility check runs.
         group.alpha = 0f;
         SetInteractable(false);
+
+        // Hide the status icon immediately. Left to the first poll it would show
+        // for a fraction of a second, and if it's never wired it would otherwise
+        // sit visible forever regardless of whether anything is applied.
+        if (statusIcon != null) statusIcon.enabled = false;
+        SetCastBar(false, 0f);
+
+        // fillAmount is ignored unless the Image is set to Filled — on Simple the
+        // sprite just draws whole, so the bar pops in fully instead of sweeping.
+        // Silent and baffling, so say it out loud.
+        if (castFill != null && castFill.type != Image.Type.Filled)
+            Debug.LogWarning($"[CompanionUI] Cast bar '{castFill.name}' has Image Type = {castFill.type}. Set it to FILLED (Fill Method: Horizontal, Fill Origin: Left) or it can't fill gradually.", castFill);
+
+        if (statusIcon != null && statusIcon.type != Image.Type.Filled)
+            Debug.LogWarning($"[CompanionUI] Status icon '{statusIcon.name}' has Image Type = {statusIcon.type}. Set it to FILLED (Fill Method: Radial 360) if you want the buff/debuff icon to wind down; ignore this if you want a plain icon.", statusIcon);
     }
 
     void Start()
@@ -96,26 +141,78 @@ public class CompanionUI : MonoBehaviour
             return;
         }
 
-        if (healthBar == null)
+        if (!HasAnyDisplay())
         {
-            Debug.LogWarning($"[CompanionUI] '{name}' found no HealthBarUi on this panel or its children — name and health stay blank. Add a HealthBarUi component to the panel and wire its Slider / Name Label / Label, or drag one into the Health Bar field.", this);
+            Debug.LogWarning($"[CompanionUI] '{name}' has nothing to write into — drag your name text into the Name Label field (and optionally the Slider), or put a HealthBarUi on this panel.", this);
             return;
         }
 
-        // Seed the bar after Comapnion.Start has applied its definition, so the
-        // panel opens on the right name and full health rather than placeholders.
+        // Same text object in both slots = the health numbers overwrite the name
+        // every frame, so the panel shows "100 / 100" where the name should be.
+        // Drop the health text so the name survives, and say why.
+        if (nameLabel != null && nameLabel == healthLabel)
+        {
+            Debug.LogWarning($"[CompanionUI] '{name}' has the SAME text object ('{nameLabel.name}') in both Name Label and Health Label, so the numbers were overwriting the name. Ignoring Health Label — give the numbers their own text object, or leave Health Label empty.", this);
+            healthLabel = null;
+        }
+
+        // Seed after Comapnion.Awake has applied its definition, so the panel opens
+        // on the name from the Companion Definition asset rather than placeholders.
         shownName = body.DisplayName;
         shownMaxHealth = body.MaxHealth;
         shownHealth = body.CurrentHealth;
-        healthBar.SetName(shownName);
-        healthBar.Initialize(shownMaxHealth, shownHealth);
+        PushName(shownName);
+        PushHealth(shownHealth, shownMaxHealth);
 
-        // Prints exactly what got resolved, so a blank panel can be traced to the
-        // real cause — wrong companion, empty name, or the wrong HealthBarUi.
+        // Prints exactly what got resolved, so a blank panel traces to the real
+        // cause — wrong companion, empty name, or nothing wired to write into.
         if (logVisibility)
             Debug.Log($"[CompanionUI] '{name}' wired to companion '{body.name}' " +
                       $"DisplayName=\"{shownName}\" (len {(shownName == null ? -1 : shownName.Length)}), " +
-                      $"health {shownHealth}/{shownMaxHealth}, using HealthBarUi on '{healthBar.name}'.", this);
+                      $"health {shownHealth}/{shownMaxHealth}. Writing to: " +
+                      $"nameLabel={(nameLabel != null ? nameLabel.name : "none")}, " +
+                      $"healthLabel={(healthLabel != null ? healthLabel.name : "none")}, " +
+                      $"slider={(healthSlider != null ? healthSlider.name : "none")}, " +
+                      $"mode={(UsingDirectFields ? "direct fields (HealthBarUi ignored)" : "HealthBarUi " + (healthBar != null ? healthBar.name : "none"))}.", this);
+    }
+
+    private bool HasAnyDisplay()
+    {
+        return nameLabel != null || healthSlider != null || healthLabel != null || healthBar != null;
+    }
+
+    // Direct references WIN over a HealthBarUi, and the two are never used together.
+    // Driving both meant HealthBarUi's own Label field could point at the same text
+    // object as our Name Label, and its health numbers would overwrite the name.
+    private bool UsingDirectFields => nameLabel != null || healthSlider != null || healthLabel != null;
+
+    private void PushName(string displayName)
+    {
+        if (UsingDirectFields)
+        {
+            if (nameLabel != null) nameLabel.text = displayName;
+            return;
+        }
+        if (healthBar != null) healthBar.SetName(displayName);
+    }
+
+    private void PushHealth(float current, float max)
+    {
+        if (UsingDirectFields)
+        {
+            if (healthSlider != null)
+            {
+                healthSlider.minValue = 0f;
+                healthSlider.maxValue = max;
+                healthSlider.value = current;
+            }
+            if (healthLabel != null)
+                healthLabel.text = Mathf.CeilToInt(current) + " / " + Mathf.CeilToInt(max);
+            return;
+        }
+        // Initialize rather than SetHealth: it rescales the bar's own slider too, so
+        // a max-health change lands correctly without a separate call.
+        if (healthBar != null) healthBar.Initialize(max, current);
     }
 
     void LateUpdate()
@@ -137,15 +234,27 @@ public class CompanionUI : MonoBehaviour
         {
             pollTimer = statusPollInterval;
             RefreshName();
-            statusActive = showWhenStatusActive && HasActiveStatus();
+            // The icon follows what's actually applied; showWhenStatusActive only
+            // decides whether that also forces the whole panel open.
+            activeEffect = FindActiveStatus();
+            statusActive = showWhenStatusActive && activeEffect != null;
+            UpdateStatusIcon(activeEffect);
         }
+
+        // Countdown and cast fill run every frame, not on the poll, so they drain
+        // smoothly instead of stepping four times a second.
+        if (statusIcon != null && statusIcon.enabled && activeEffect != null)
+            statusIcon.fillAmount = activeEffect.RemainingNormalized;
+
+        bool casting = UpdateCastBar();
 
         // Declared up front, not inline: with Show When Looked At off, && skips the
         // call entirely and the out values would never be assigned.
         float lookAngleNow = 999f;
         float distanceNow = 999f;
         bool lookedAt = showWhenLookedAt && PlayerIsLookingAtOwner(out lookAngleNow, out distanceNow);
-        bool visible = statusActive || lookedAt;
+        // Casting forces the panel open — a cast bar nobody can see is pointless.
+        bool visible = statusActive || lookedAt || casting;
 
         if (logVisibility && visible != lastVisible)
         {
@@ -166,31 +275,28 @@ public class CompanionUI : MonoBehaviour
     // single value both are showing.
     private void RefreshHealth()
     {
-        if (healthBar == null || body == null) return;
+        if (body == null || !HasAnyDisplay()) return;
+        if (Mathf.Approximately(body.CurrentHealth, shownHealth)
+            && Mathf.Approximately(body.MaxHealth, shownMaxHealth)) return;
 
-        if (!Mathf.Approximately(body.MaxHealth, shownMaxHealth))
-        {
-            shownMaxHealth = body.MaxHealth;
-            // refill: false — keep the current value, we push it below.
-            healthBar.SetMaxHealth(shownMaxHealth, false);
-            shownHealth = -1f; // force the health push so the bar rescales correctly
-        }
+        shownHealth = body.CurrentHealth;
+        shownMaxHealth = body.MaxHealth;
+        PushHealth(shownHealth, shownMaxHealth);
 
-        if (!Mathf.Approximately(body.CurrentHealth, shownHealth))
-        {
-            shownHealth = body.CurrentHealth;
-            healthBar.SetHealth(shownHealth);
-        }
+        if (logVisibility)
+            Debug.Log($"[CompanionUI] {body.name} health changed → {shownHealth}/{shownMaxHealth}; " +
+                      $"slider '{(healthSlider != null ? healthSlider.name : "none")}' now " +
+                      $"{(healthSlider != null ? healthSlider.value + "/" + healthSlider.maxValue : "n/a")}.", this);
     }
 
     // Picks up a name arriving late — e.g. the spawner calling Initialize with a
     // definition after this panel already seeded itself.
     private void RefreshName()
     {
-        if (healthBar == null || body == null) return;
+        if (body == null || !HasAnyDisplay()) return;
         if (body.DisplayName == shownName) return;
         shownName = body.DisplayName;
-        healthBar.SetName(shownName);
+        PushName(shownName);
     }
 
     // "Looking at" = the companion sits within lookAngle of where the camera points,
@@ -223,13 +329,78 @@ public class CompanionUI : MonoBehaviour
 
     // Buffs and debuffs are added at runtime, so this polls instead of caching a
     // reference that would go stale the moment an effect is applied or expires.
-    private bool HasActiveStatus()
+    private IStatusEffect FindActiveStatus()
     {
-        if (owner == null) return false;
+        if (owner == null) return null;
+
         IStatusEffect[] effects = owner.GetComponentsInChildren<IStatusEffect>(true);
+        IStatusEffect best = null;
         for (int i = 0; i < effects.Length; i++)
-            if (effects[i] != null && effects[i].IsActive) return true;
+        {
+            if (effects[i] == null || !effects[i].IsActive) continue;
+            // A debuff wins outright — trouble is the more urgent thing to show.
+            if (effects[i].Kind == StatusEffectKind.Debuff) return effects[i];
+            if (best == null) best = effects[i];
+        }
+        return best;
+    }
+
+    // One image, two sprites: swaps to the buff or debuff art while something is
+    // running, and switches off entirely when nothing is.
+    private void UpdateStatusIcon(IStatusEffect effect)
+    {
+        if (statusIcon == null) return;
+
+        if (effect == null)
+        {
+            statusIcon.enabled = false;
+            return;
+        }
+
+        Sprite sprite = effect.Kind == StatusEffectKind.Debuff ? debuffIcon : buffIcon;
+        // No art assigned for that kind → stay hidden rather than show whatever
+        // sprite happened to be left on the Image in the editor.
+        if (sprite != null) statusIcon.sprite = sprite;
+        statusIcon.enabled = sprite != null;
+    }
+
+    // Fills the bar while any of this companion's abilities is casting. Reads the
+    // generic CompanionAbility contract, so a new ability with a cast shows a bar
+    // here without this script knowing anything about it. Returns true while casting.
+    private bool UpdateCastBar()
+    {
+        if (abilities == null) return false;
+
+        for (int i = 0; i < abilities.Length; i++)
+        {
+            if (abilities[i] == null || !abilities[i].IsCasting) continue;
+            SetCastBar(true, abilities[i].CastProgress);
+
+            // Sampled, not every frame: shows whether the value is actually ramping
+            // or slamming straight to 1 (which would mean the cast has no duration).
+            if (logVisibility && Time.time >= nextCastLogAt)
+            {
+                nextCastLogAt = Time.time + 0.5f;
+                Debug.Log($"[CompanionUI] t={Time.time:F1}s {abilities[i].abilityName} casting — progress {abilities[i].CastProgress:F2}, " +
+                          $"fill '{(castFill != null ? castFill.name : "NOT WIRED")}' = {(castFill != null ? castFill.fillAmount.ToString("F2") : "n/a")}, " +
+                          $"type {(castFill != null ? castFill.type.ToString() : "n/a")}, " +
+                          $"abilityEnabled={abilities[i].isActiveAndEnabled}.", this);
+            }
+            return true;
+        }
+        nextCastLogAt = 0f;
+
+        // Nothing casting: empty it AND switch it off. Zeroing as well as hiding
+        // means it can never flash a leftover full bar as the next cast starts.
+        SetCastBar(false, 0f);
         return false;
+    }
+
+    private void SetCastBar(bool active, float progress)
+    {
+        if (castFill == null) return;
+        castFill.fillAmount = progress;
+        if (castFill.gameObject.activeSelf != active) castFill.gameObject.SetActive(active);
     }
 
     // Keep a faded-out panel from swallowing clicks / raycasts.

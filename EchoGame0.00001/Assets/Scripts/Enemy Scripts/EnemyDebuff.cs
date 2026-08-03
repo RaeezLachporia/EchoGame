@@ -13,6 +13,7 @@ public class EnemyDebuff : MonoBehaviour, IStatusEffect
 {
     private float multiplier = 1f;
     private float expiresAt;
+    private float totalDuration;
     private bool logDebuff;
     private EnemyStatusIcons statusIcons;
 
@@ -31,6 +32,9 @@ public class EnemyDebuff : MonoBehaviour, IStatusEffect
     // IStatusEffect — lets status-aware UI ask "is anything running on this
     // character?" without knowing what a damage debuff is.
     public bool IsActive => Time.time < expiresAt;
+    public StatusEffectKind Kind => StatusEffectKind.Debuff;
+    public float RemainingNormalized =>
+        totalDuration <= 0f ? 0f : Mathf.Clamp01(SecondsRemaining / totalDuration);
 
     // Re-applying refreshes the timer and keeps the STRONGER multiplier, so a
     // second debuff landing on the same enemy can never weaken the first one.
@@ -38,6 +42,9 @@ public class EnemyDebuff : MonoBehaviour, IStatusEffect
     {
         multiplier = Mathf.Max(multiplier, damageMultiplier);
         expiresAt = Mathf.Max(expiresAt, Time.time + duration);
+        // Track the longest duration applied so the countdown is measured against
+        // the full bar rather than whatever fraction was left when it refreshed.
+        totalDuration = Mathf.Max(totalDuration, duration);
         logDebuff = log;
         if (statusIcons != null) statusIcons.SetDebuffVisible(true);
         if (logDebuff)
@@ -58,6 +65,7 @@ public class EnemyDebuff : MonoBehaviour, IStatusEffect
     {
         multiplier = 1f;
         expiresAt = 0f;
+        totalDuration = 0f;
         if (statusIcons != null) statusIcons.SetDebuffVisible(false);
     }
 

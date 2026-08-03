@@ -12,6 +12,8 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
     [Header("Health")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth = 100f;
+    [Tooltip("Log every hit this companion takes, showing whether a resistance buff reduced it.")]
+    [SerializeField] private bool logDamage = true;
 
     [Header("Push Response")]
     [Tooltip("Scales player impact speed into companion push speed. 0.3 = a 6 m/s sprint pushes the companion at ~1.8 m/s.")]
@@ -145,7 +147,22 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
 
     public void TakeDamage(float damage)
     {
-        currentHealth = Mathf.Max(0f, currentHealth - damage);
+        // A damage-resistance buff (Zara's) scales the hit down before it lands.
+        // Done here rather than at the attacker so every damage source is covered.
+        float incoming = damage;
+        AllyBuff buff = GetComponent<AllyBuff>();
+        if (buff != null && buff.DamageMultiplier < 1f)
+        {
+            incoming = damage * buff.DamageMultiplier;
+            if (logDamage)
+                Debug.Log($"[Comapnion] {displayName} BUFFED hit: {damage} x{buff.DamageMultiplier:F2} = {incoming} damage ({buff.SecondsRemaining:F1}s of buff left).", this);
+        }
+        else if (logDamage)
+        {
+            Debug.Log($"[Comapnion] {displayName} normal hit: {incoming} damage.", this);
+        }
+
+        currentHealth = Mathf.Max(0f, currentHealth - incoming);
         if (CompanionHealthHud.Instance != null)
             CompanionHealthHud.Instance.SetHealth(hudSlot, currentHealth);
 

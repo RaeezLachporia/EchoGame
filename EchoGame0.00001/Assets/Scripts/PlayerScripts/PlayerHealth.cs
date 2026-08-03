@@ -10,9 +10,23 @@ public class PlayerHealth : MonoBehaviour, IDamageable, IHealable
 
     public void TakeDamage(float damage)
     {
-        Debug.Log($"[PlayerHealth] TakeDamage({damage}), playerUi={(playerUi == null ? "NULL" : playerUi.name)}");
+        // A damage-resistance buff (Zara's) scales the hit down before it lands.
+        // The player's health lives in PlayerUi, so resist here — on the object the
+        // buff is actually attached to — then forward the reduced amount.
+        float incoming = damage;
+        AllyBuff buff = GetComponent<AllyBuff>();
+        if (buff != null && buff.DamageMultiplier < 1f)
+        {
+            incoming = damage * buff.DamageMultiplier;
+            Debug.Log($"[PlayerHealth] BUFFED hit: {damage} x{buff.DamageMultiplier:F2} = {incoming} damage ({buff.SecondsRemaining:F1}s of buff left).");
+        }
+        else
+        {
+            Debug.Log($"[PlayerHealth] TakeDamage({incoming}), playerUi={(playerUi == null ? "NULL" : playerUi.name)}");
+        }
+
         if (playerUi != null)
-            playerUi.TakeDamage(damage);
+            playerUi.TakeDamage(incoming);
     }
 
     public void Heal(float amount)
