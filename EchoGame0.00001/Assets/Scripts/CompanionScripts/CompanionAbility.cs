@@ -8,6 +8,7 @@ public enum AbilityTargetKind
     EnemyUnderReticle, // fire now on whatever's under the crosshair / lock (Attack)
     AllyPicker,        // open the ally wheel — player picks a companion or the protagonist (heal/buff)
     EnemyPicker,       // open the enemy-cycle reticle — player picks a nearby enemy (debuff)
+    Self,              // centred on the caster, no picker — fires immediately (taunt)
 }
 
 // Base for every companion ability (Attack, Heal, and whatever comes later).

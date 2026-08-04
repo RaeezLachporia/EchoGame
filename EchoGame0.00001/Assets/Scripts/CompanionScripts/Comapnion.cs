@@ -170,6 +170,36 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
             Destroy(gameObject);
     }
 
+    // Temporary max-health boost (Layla's taunt). The bonus is granted as real
+    // health too, so it's usable the moment it lands rather than being empty
+    // headroom she has to be healed into.
+    public void ApplyMaxHealthBonus(float bonus)
+    {
+        if (bonus <= 0f) return;
+        maxHealth += bonus;
+        currentHealth += bonus;
+        PushMaxHealthToHud();
+    }
+
+    // Removing clamps current health DOWN to the reduced max — losing the boost
+    // should cost her the temporary hit points, not leave her over her own cap.
+    public void RemoveMaxHealthBonus(float bonus)
+    {
+        if (bonus <= 0f) return;
+        maxHealth = Mathf.Max(1f, maxHealth - bonus);
+        currentHealth = Mathf.Min(currentHealth, maxHealth);
+        PushMaxHealthToHud();
+    }
+
+    private void PushMaxHealthToHud()
+    {
+        if (CompanionHealthHud.Instance == null) return;
+        // refill: false — we manage currentHealth above; a refill would silently
+        // top her up every time the boost expires.
+        CompanionHealthHud.Instance.SetMaxHealth(hudSlot, maxHealth, false);
+        CompanionHealthHud.Instance.SetHealth(hudSlot, currentHealth);
+    }
+
     public void Heal(float amount)
     {
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);

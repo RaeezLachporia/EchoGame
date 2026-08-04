@@ -17,6 +17,12 @@ public class EnemyFollowPlayer : MonoBehaviour
     // invisible to this script — they roam enough that they'd trip alerts
     // constantly and drain the tension out of sneaking. How enemies respond to
     // companions is a combat-state decision, not a vision one.
+    //
+    // TAUNT is the one exception, and it's a targeting override rather than a
+    // vision one: an already-engaged enemy can be redirected onto a companion
+    // (Layla) for a while. PatrolTick still only ever looks for the player, so
+    // taunting can't wake a guard who never noticed anyone — everything after
+    // that first sighting goes through CurrentTarget instead.
     public enum EnemyState { Patrol, Alert, Combat }
 
     [Header("Targets")]
@@ -53,6 +59,11 @@ public class EnemyFollowPlayer : MonoBehaviour
     [SerializeField] private bool logStateChanges = false;
 
     private Transform player;
+    // Taunt override (Layla's). While it holds, this enemy chases the taunter
+    // instead of the player. Everything except PatrolTick goes through
+    // CurrentTarget, so the redirect is total once they're already engaged.
+    private Transform tauntTarget;
+    private float tauntExpiresAt;
     private Vector3 lastKnownPosition;
     // Valid only while (Alert or Combat) && !PlayerInSight: the Time.time at which
     // the last-known grip gives up if sight isn't reacquired first.
@@ -93,9 +104,39 @@ public class EnemyFollowPlayer : MonoBehaviour
         StateChanged?.Invoke(previous, next);
     }
 
-    // True while Alert has live line of sight (cone: red). False during the
-    // last-known grip (cone: orange). Always false in Patrol.
+    // True while Alert has live line of sight of the CURRENT target (cone: red).
+    // False during the last-known grip (cone: orange). Always false in Patrol.
+    // Named for the player because that's the usual target — while taunted it
+    // tracks the taunter instead.
     public bool PlayerInSight { get; private set; }
+
+    // True while a taunt is holding this enemy. Expires on its own, and drops
+    // instantly if the taunter dies or is disabled — no cleanup needed elsewhere.
+    public bool IsTaunted => tauntTarget != null
+                          && Time.time < tauntExpiresAt
+                          && tauntTarget.gameObject.activeInHierarchy;
+
+    // Who this enemy is actually hunting. Everything past the initial Patrol
+    // sighting reads this rather than `player`, so a taunt redirects the chase,
+    // the facing, and the attack all at once.
+    public Transform CurrentTarget => IsTaunted ? tauntTarget : player;
+
+    // Layla's taunt. Refuses enemies that haven't noticed anyone yet: pulling a
+    // patrolling guard would blow a stealth approach the player never triggered.
+    // Accepting forces Combat so they commit immediately rather than re-walking
+    // the Alert escalation.
+    public bool TryTaunt(Transform source, float duration)
+    {
+        if (source == null) return false;
+        if (State != EnemyState.Alert && State != EnemyState.Combat) return false;
+
+        tauntTarget = source;
+        tauntExpiresAt = Time.time + duration;
+        lastKnownPosition = source.position;
+        PlayerInSight = true;
+        SetState(EnemyState.Combat);
+        return true;
+    }
 
     // EnemyVisionCone reads these to build and drive the ground-fan visual.
     public float DetectionRange => detectionRange;
@@ -145,6 +186,10 @@ public class EnemyFollowPlayer : MonoBehaviour
         stateEnteredAt = Time.time;
         PlayerInSight = false;
         continuousSightTime = 0f;
+        // Pooled enemies keep fields across lives — without this a reused enemy
+        // wakes up still taunted by a companion from its previous life.
+        tauntTarget = null;
+        tauntExpiresAt = 0f;
     }
 
     void Start()
@@ -210,18 +255,20 @@ public class EnemyFollowPlayer : MonoBehaviour
     // hunting, so LOS alone retains the player.
     private void AlertTick()
     {
-        if (player == null)
+        // CurrentTarget, not player — a taunt redirects the hunt from here on.
+        Transform hunted = CurrentTarget;
+        if (hunted == null)
         {
             ReturnToPatrol();
             return;
         }
 
-        bool inSight = InRange(player) && HasLineOfSight(player);
+        bool inSight = InRange(hunted) && HasLineOfSight(hunted);
         if (inSight)
         {
             PlayerInSight = true;
-            lastKnownPosition = player.position;
-            agent.SetDestination(player.position);
+            lastKnownPosition = hunted.position;
+            agent.SetDestination(hunted.position);
 
             // Commit to Combat once the player has stayed in sight continuously for
             // timeToEngage — stalking turns into a fight. A blink out of sight resets
@@ -266,18 +313,19 @@ public class EnemyFollowPlayer : MonoBehaviour
     // drops back to Patrol. No FOV check: a committed enemy tracks on LOS alone.
     private void CombatTick()
     {
-        if (player == null)
+        Transform hunted = CurrentTarget;
+        if (hunted == null)
         {
             ReturnToPatrol();
             return;
         }
 
-        bool inSight = InRange(player) && HasLineOfSight(player);
+        bool inSight = InRange(hunted) && HasLineOfSight(hunted);
         if (inSight)
         {
             PlayerInSight = true;
-            lastKnownPosition = player.position;
-            agent.SetDestination(player.position);
+            lastKnownPosition = hunted.position;
+            agent.SetDestination(hunted.position);
         }
         else
         {
@@ -336,9 +384,9 @@ public class EnemyFollowPlayer : MonoBehaviour
         // moving — otherwise the agent's loop-around-stoppingDistance path keeps
         // velocity nonzero and the enemy circles while staring at the path tangent.
         // Combat wants the same facing so swings land on the player, not the tangent.
-        if ((State == EnemyState.Alert || State == EnemyState.Combat) && PlayerInSight && player != null)
+        if ((State == EnemyState.Alert || State == EnemyState.Combat) && PlayerInSight && CurrentTarget != null)
         {
-            FaceTarget(player.position);
+            FaceTarget(CurrentTarget.position);
             return;
         }
 
@@ -415,11 +463,11 @@ public class EnemyFollowPlayer : MonoBehaviour
         Gizmos.DrawLine(origin, origin + leftEdge);
         Gizmos.DrawLine(origin, origin + rightEdge);
 
-        if ((State == EnemyState.Alert || State == EnemyState.Combat) && player != null)
+        if ((State == EnemyState.Alert || State == EnemyState.Combat) && CurrentTarget != null)
         {
             // Red = live sight line, orange = walking the last-known grip.
             Gizmos.color = PlayerInSight ? Color.red : new Color(1f, 0.55f, 0.1f);
-            Vector3 to = PlayerInSight ? player.position : lastKnownPosition;
+            Vector3 to = PlayerInSight ? CurrentTarget.position : lastKnownPosition;
             Gizmos.DrawLine(transform.position + Vector3.up * eyeHeight, to + Vector3.up * eyeHeight);
         }
     }
