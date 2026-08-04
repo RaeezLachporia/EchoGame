@@ -4819,6 +4819,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 164588269}
     - target: {fileID: 7495390142096813920, guid: 8df86de8facc5cf45958de3ce3aacc35, type: 3}
+      propertyPath: cycleLeftIcon
+      value: 
+      objectReference: {fileID: 21300000, guid: e1c197b5365d5874abef126fec557a78, type: 3}
+    - target: {fileID: 7495390142096813920, guid: 8df86de8facc5cf45958de3ce3aacc35, type: 3}
+      propertyPath: cycleRightIcon
+      value: 
+      objectReference: {fileID: 21300000, guid: c8a9cd79d888b1a4b8cb98e975b003bb, type: 3}
+    - target: {fileID: 7495390142096813920, guid: 8df86de8facc5cf45958de3ce3aacc35, type: 3}
       propertyPath: wheelMessageLabel
       value: 
       objectReference: {fileID: 1196523044}

@@ -60,6 +60,10 @@ public class CommandWheel : MonoBehaviour
     [Header("Enemy Targeting")]
     [Tooltip("How far out the enemy-cycle layer looks for enemies to debuff. Matches PlayerLockOn's lock range by default.")]
     [SerializeField] private float enemyCycleRange = 25f;
+    [Tooltip("Arrow shown on the LEFT slice while cycling enemies, so d-pad left reads as 'previous target'. Leave empty for a blank slice.")]
+    [SerializeField] private Sprite cycleLeftIcon;
+    [Tooltip("Arrow shown on the RIGHT slice while cycling enemies, so d-pad right reads as 'next target'. Leave empty for a blank slice.")]
+    [SerializeField] private Sprite cycleRightIcon;
 
     [Header("Highlight Tints")]
     [Tooltip("Highlight tint while a slice is selected. White = the sprite's own colours.")]
@@ -102,6 +106,10 @@ public class CommandWheel : MonoBehaviour
     // the d-pad, and which one is currently highlighted.
     private readonly System.Collections.Generic.List<Transform> cycleEnemies = new System.Collections.Generic.List<Transform>();
     private int cycleIndex;
+    // How long the wedge stays lit after a left/right press. The cycle doesn't
+    // change state on a press (unlike the other layers, which highlight and then
+    // transition), so it needs its own timer to put the wedge away again.
+    private float cycleHighlightTimer;
 
     void Awake()
     {
@@ -206,6 +214,13 @@ public class CommandWheel : MonoBehaviour
                 }
                 cycleIndex %= cycleEnemies.Count;
                 HighlightCycledEnemy();
+            }
+
+            // Put the pressed-slice wedge away once its hold time is up.
+            if (cycleHighlightTimer > 0f)
+            {
+                cycleHighlightTimer -= Time.unscaledDeltaTime;
+                if (cycleHighlightTimer <= 0f) HideHighlight();
             }
         }
 
@@ -588,12 +603,17 @@ public class CommandWheel : MonoBehaviour
             (a.position - from).sqrMagnitude.CompareTo((b.position - from).sqrMagnitude));
     }
 
-    // Step through the list, wrapping at both ends.
+    // Step through the list, wrapping at both ends. Lights the wedge on whichever
+    // slice was pressed, matching how the other layers confirm a d-pad press.
     private void CycleEnemy(int step)
     {
         if (cycleEnemies.Count == 0) return;
         cycleIndex = (cycleIndex + step + cycleEnemies.Count) % cycleEnemies.Count;
         HighlightCycledEnemy();
+
+        // slice 1 = RIGHT (next), slice 3 = LEFT (previous)
+        ShowHighlight(step > 0 ? 1 : 3, selectTint);
+        cycleHighlightTimer = companionHighlightHoldTime;
     }
 
     private Transform CurrentCycleEnemy =>
@@ -647,6 +667,7 @@ public class CommandWheel : MonoBehaviour
     {
         cycleEnemies.Clear();
         cycleIndex = 0;
+        cycleHighlightTimer = 0f;
         if (crosshair == null) return;
         crosshair.LockOverride = lockOn != null && lockOn.IsLocked ? lockOn.LockedTarget : null;
     }
@@ -731,9 +752,7 @@ public class CommandWheel : MonoBehaviour
                 break;
 
             case WheelState.EnemyCycle:
-                // Targeting happens out in the world (the highlighted enemy), not on
-                // the wheel — blank the slices so they don't read as pickable.
-                ClearIcons();
+                ShowCycleArrows();
                 HideHighlight();
                 break;
 
@@ -769,6 +788,19 @@ public class CommandWheel : MonoBehaviour
     {
         for (int i = 0; i < icons.Length; i++)
             SetIcon(icons[i], null);
+    }
+
+    // Enemy cycle: the wheel isn't a picker here — the target is out in the world,
+    // shown by the highlight. Left/right get arrows so the d-pad cycling is
+    // discoverable; top and bottom stay blank because they do nothing in this state.
+    // Deliberately NOT run through Resolve() — an unassigned arrow should leave the
+    // slice empty rather than show the generic placeholder as if it were pressable.
+    private void ShowCycleArrows()
+    {
+        SetIcon(icons[0], null);            // top    — unused
+        SetIcon(icons[1], cycleRightIcon);  // right  — next target
+        SetIcon(icons[2], null);            // bottom — unused
+        SetIcon(icons[3], cycleLeftIcon);   // left   — previous target
     }
 
     // Companion wheel: slices show the selected companion's ability icons in
