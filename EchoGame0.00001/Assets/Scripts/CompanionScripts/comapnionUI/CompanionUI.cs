@@ -121,12 +121,6 @@ public class CompanionUI : MonoBehaviour
         if (statusIcon != null) statusIcon.enabled = false;
         SetCastBar(false, 0f);
 
-        // fillAmount is ignored unless the Image is set to Filled — on Simple the
-        // sprite just draws whole, so the bar pops in fully instead of sweeping.
-        // Silent and baffling, so say it out loud.
-        if (castFill != null && castFill.type != Image.Type.Filled)
-            Debug.LogWarning($"[CompanionUI] Cast bar '{castFill.name}' has Image Type = {castFill.type}. Set it to FILLED (Fill Method: Horizontal, Fill Origin: Left) or it can't fill gradually.", castFill);
-
         if (statusIcon != null && statusIcon.type != Image.Type.Filled)
             Debug.LogWarning($"[CompanionUI] Status icon '{statusIcon.name}' has Image Type = {statusIcon.type}. Set it to FILLED (Fill Method: Radial 360) if you want the buff/debuff icon to wind down; ignore this if you want a plain icon.", statusIcon);
     }
@@ -396,10 +390,33 @@ public class CompanionUI : MonoBehaviour
         return false;
     }
 
+    // Fills the bar whatever the Image is set to.
+    //
+    // fillAmount ONLY does anything on Image Type = Filled — on Simple/Sliced/Tiled
+    // Unity draws the whole sprite and ignores it, which looks like the bar popping
+    // in at full width. Rather than force one setup, stretch the rect for those
+    // types: moving the right anchor keeps 9-slice borders crisp (scaling wouldn't).
     private void SetCastBar(bool active, float progress)
     {
         if (castFill == null) return;
-        castFill.fillAmount = progress;
+
+        if (castFill.type == Image.Type.Filled)
+        {
+            castFill.fillAmount = progress;
+        }
+        else
+        {
+            RectTransform rt = castFill.rectTransform;
+            // Pin the left edge once so the bar grows rightwards from a fixed start.
+            if (!Mathf.Approximately(rt.anchorMin.x, 0f))
+                rt.anchorMin = new Vector2(0f, rt.anchorMin.y);
+            rt.anchorMax = new Vector2(progress, rt.anchorMax.y);
+            // Leftover left/right insets fight the anchors and leave a stub of bar
+            // visible at 0, so clear them while keeping the vertical ones.
+            rt.offsetMin = new Vector2(0f, rt.offsetMin.y);
+            rt.offsetMax = new Vector2(0f, rt.offsetMax.y);
+        }
+
         if (castFill.gameObject.activeSelf != active) castFill.gameObject.SetActive(active);
     }
 

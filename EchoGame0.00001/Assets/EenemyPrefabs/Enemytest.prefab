@@ -746,7 +746,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c74c745f3b35fb4ca5f6b3dd3ce1677, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  maxHealth: 50
+  maxHealth: 300
   currentHealth: 50
   healthSlider: {fileID: 6559806831206527713}
   logDamage: 1
@@ -809,6 +809,8 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 0.2, b: 0.2, a: 1}
   intensity: 0.34
   fadeSpeed: 12
+  flashColor: {r: 1, g: 1, b: 1, a: 1}
+  flashFadeSpeed: 6
 --- !u!114 &9159337811813846432
 MonoBehaviour:
   m_ObjectHideFlags: 0
