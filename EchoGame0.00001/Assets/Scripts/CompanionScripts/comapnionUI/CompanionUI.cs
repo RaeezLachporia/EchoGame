@@ -400,24 +400,36 @@ public class CompanionUI : MonoBehaviour
     {
         if (castFill == null) return;
 
-        if (castFill.type == Image.Type.Filled)
+        SetBarFill(castFill, progress);
+        if (castFill.gameObject.activeSelf != active) castFill.gameObject.SetActive(active);
+    }
+
+    // Drives a bar fill from 0 to 1 whatever the Image Type is.
+    //
+    // Filled images render a partial fill natively but CANNOT be 9-sliced, so
+    // rounded caps get cut square. Simple/Sliced/Tiled ignore fillAmount entirely,
+    // so for those we stretch the rect by moving its right anchor — which keeps a
+    // 9-sliced sprite's rounded ends crisp (scaling would squash them instead).
+    // That means a bar can keep its curved edges just by staying Sliced.
+    private static void SetBarFill(Image img, float t)
+    {
+        if (img == null) return;
+
+        if (img.type == Image.Type.Filled)
         {
-            castFill.fillAmount = progress;
-        }
-        else
-        {
-            RectTransform rt = castFill.rectTransform;
-            // Pin the left edge once so the bar grows rightwards from a fixed start.
-            if (!Mathf.Approximately(rt.anchorMin.x, 0f))
-                rt.anchorMin = new Vector2(0f, rt.anchorMin.y);
-            rt.anchorMax = new Vector2(progress, rt.anchorMax.y);
-            // Leftover left/right insets fight the anchors and leave a stub of bar
-            // visible at 0, so clear them while keeping the vertical ones.
-            rt.offsetMin = new Vector2(0f, rt.offsetMin.y);
-            rt.offsetMax = new Vector2(0f, rt.offsetMax.y);
+            img.fillAmount = t;
+            return;
         }
 
-        if (castFill.gameObject.activeSelf != active) castFill.gameObject.SetActive(active);
+        RectTransform rt = img.rectTransform;
+        // Pin the left edge once so the bar grows rightwards from a fixed start.
+        if (!Mathf.Approximately(rt.anchorMin.x, 0f))
+            rt.anchorMin = new Vector2(0f, rt.anchorMin.y);
+        rt.anchorMax = new Vector2(t, rt.anchorMax.y);
+        // Leftover left/right insets fight the anchors and leave a stub of bar
+        // visible at 0, so clear them while keeping the vertical ones.
+        rt.offsetMin = new Vector2(0f, rt.offsetMin.y);
+        rt.offsetMax = new Vector2(0f, rt.offsetMax.y);
     }
 
     // Keep a faded-out panel from swallowing clicks / raycasts.
