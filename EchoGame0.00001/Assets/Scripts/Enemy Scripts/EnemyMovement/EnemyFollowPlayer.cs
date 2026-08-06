@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Pool;
@@ -23,6 +24,13 @@ public class EnemyFollowPlayer : MonoBehaviour
     // (Layla) for a while. PatrolTick still only ever looks for the player, so
     // taunting can't wake a guard who never noticed anyone — everything after
     // that first sighting goes through CurrentTarget instead.
+    //
+    // RETARGETING (see RetargetTick) is the general form of the same idea: once
+    // in COMBAT, and only then, a companion who plants themselves closer than the
+    // player becomes the thing we swing at. That's what makes a body-block read as
+    // peeling instead of as a companion politely standing in the way. It stays out
+    // of Patrol and Alert on purpose — those are the stealth-sensitive states, and
+    // a companion who can't be seen can't blow an approach.
     public enum EnemyState { Patrol, Alert, Combat }
 
     [Header("Targets")]
@@ -48,6 +56,14 @@ public class EnemyFollowPlayer : MonoBehaviour
     [Tooltip("Seconds the player must stay continuously in sight while Alert before the enemy commits to Combat and starts attacking. This is the 'spotted in the cone for this long' engage delay. A blink out of sight resets it.")]
     [SerializeField] private float timeToEngage = 1.5f;
 
+    [Header("Combat Retargeting")]
+    [Tooltip("Once fighting, a companion this close can steal our attention off the player. Never applies in Patrol or Alert — companions stay invisible until the fight has actually started.")]
+    [SerializeField] private float companionNoticeRadius = 12f;
+    [Tooltip("Seconds between re-picking who to fight. Slow on purpose: this is a decision, not a tracker.")]
+    [SerializeField] private float retargetInterval = 0.5f;
+    [Tooltip("A challenger must be this many times closer than the current target to steal it. 1 = switch to whoever is nearest and flip-flop constantly when two of them are shoulder to shoulder.")]
+    [SerializeField, Min(1f)] private float switchAdvantage = 1.4f;
+
     [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField] private float animationDampTime = 0.1f;
@@ -64,6 +80,11 @@ public class EnemyFollowPlayer : MonoBehaviour
     // CurrentTarget, so the redirect is total once they're already engaged.
     private Transform tauntTarget;
     private float tauntExpiresAt;
+    // Set only by RetargetTick, and only while in Combat. null means "the player",
+    // which is both the default and the thing we fall back to whenever the chosen
+    // companion dies, disappears, or walks off — see CurrentTarget.
+    private Transform combatTarget;
+    private float nextRetargetAt;
     private Vector3 lastKnownPosition;
     // Valid only while (Alert or Combat) && !PlayerInSight: the Time.time at which
     // the last-known grip gives up if sight isn't reacquired first.
@@ -119,7 +140,13 @@ public class EnemyFollowPlayer : MonoBehaviour
     // Who this enemy is actually hunting. Everything past the initial Patrol
     // sighting reads this rather than `player`, so a taunt redirects the chase,
     // the facing, and the attack all at once.
-    public Transform CurrentTarget => IsTaunted ? tauntTarget : player;
+    //
+    // Order matters: a taunt is a hard override and outranks the proximity pick.
+    // The combatTarget null-check is also the death handler — Comapnion destroys
+    // its GameObject on death, and Unity's fake-null makes that read as null here,
+    // so a killed companion silently hands us back to the player.
+    public Transform CurrentTarget => IsTaunted ? tauntTarget
+                                    : (combatTarget != null ? combatTarget : player);
 
     // Layla's taunt. Refuses enemies that haven't noticed anyone yet: pulling a
     // patrolling guard would blow a stealth approach the player never triggered.
@@ -187,9 +214,12 @@ public class EnemyFollowPlayer : MonoBehaviour
         PlayerInSight = false;
         continuousSightTime = 0f;
         // Pooled enemies keep fields across lives — without this a reused enemy
-        // wakes up still taunted by a companion from its previous life.
+        // wakes up still taunted by a companion from its previous life, or still
+        // fixated on the companion it was fighting when it died.
         tauntTarget = null;
         tauntExpiresAt = 0f;
+        combatTarget = null;
+        nextRetargetAt = 0f;
     }
 
     void Start()
@@ -305,6 +335,9 @@ public class EnemyFollowPlayer : MonoBehaviour
         SetState(EnemyState.Combat);
         PlayerInSight = true;
         lastKnownPosition = player.position;
+        // Every fight opens on the player. Companions have to earn the switch.
+        combatTarget = null;
+        nextRetargetAt = 0f;
     }
 
     // Combat: committed to the fight. Keep chasing so EnemyCombat can land its
@@ -313,6 +346,9 @@ public class EnemyFollowPlayer : MonoBehaviour
     // drops back to Patrol. No FOV check: a committed enemy tracks on LOS alone.
     private void CombatTick()
     {
+        // A taunt is a hard override — don't let proximity argue with it.
+        if (!IsTaunted) RetargetTick();
+
         Transform hunted = CurrentTarget;
         if (hunted == null)
         {
@@ -343,10 +379,80 @@ public class EnemyFollowPlayer : MonoBehaviour
         }
     }
 
+    // Combat only: pick who to actually fight. The player is who we came for and
+    // stays the default; a companion has to plant themselves clearly closer, in
+    // the open, to take their place. That single rule is the whole aggro model —
+    // no threat table, no damage accounting. Standing in the way IS the pull.
+    private void RetargetTick()
+    {
+        if (Time.time < nextRetargetAt) return;
+        nextRetargetAt = Time.time + retargetInterval;
+
+        if (player == null)
+        {
+            combatTarget = null;
+            return;
+        }
+
+        Transform current = combatTarget != null ? combatTarget : player;
+
+        // Holding a companion we can no longer see or reach? Fall straight back to
+        // the player — no advantage test, or we'd keep chasing a ghost around a
+        // corner while the player stands behind us.
+        if (combatTarget != null &&
+            (Vector3.Distance(transform.position, combatTarget.position) > companionNoticeRadius
+             || !HasLineOfSight(combatTarget)))
+        {
+            combatTarget = null;
+            return;
+        }
+
+        float currentDistance = Vector3.Distance(transform.position, current.position);
+        Transform challenger = null;
+        float challengerDistance = float.MaxValue;
+
+        // The player is always in the running, so a companion who peeled us off
+        // can lose us again by letting the player get closer.
+        if (current != player && HasLineOfSight(player))
+        {
+            challenger = player;
+            challengerDistance = Vector3.Distance(transform.position, player.position);
+        }
+
+        IReadOnlyList<Comapnion> companions = Comapnion.Active;
+        for (int i = 0; i < companions.Count; i++)
+        {
+            Comapnion companion = companions[i];
+            if (companion == null) continue;
+
+            Transform candidate = companion.transform;
+            if (candidate == current) continue;
+
+            float distance = Vector3.Distance(transform.position, candidate.position);
+            if (distance > companionNoticeRadius) continue;
+            if (distance >= challengerDistance) continue;
+            if (!HasLineOfSight(candidate)) continue;
+
+            challenger = candidate;
+            challengerDistance = distance;
+        }
+
+        if (challenger == null) return;
+        // Clearly closer, not merely closer — otherwise two targets shoulder to
+        // shoulder make us pivot back and forth every half second and land nothing.
+        if (challengerDistance * switchAdvantage >= currentDistance) return;
+
+        combatTarget = challenger == player ? null : challenger;
+    }
+
     private void ReturnToPatrol()
     {
         SetState(EnemyState.Patrol);
         PlayerInSight = false;
+        // Losing the fight resets who it was against. Without this a re-alerted
+        // enemy would resume hunting the companion it fought last time, from
+        // across the level, having never re-spotted anyone.
+        combatTarget = null;
         // Clear the path once so EnemyPatrolling can drive from next frame — not
         // every frame after, or patrol's destination gets wiped the moment it
         // sets one.

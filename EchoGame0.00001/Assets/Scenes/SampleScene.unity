@@ -1529,13 +1529,14 @@ MonoBehaviour:
   chaseSpeed: 6
   rotationSpeed: 10
   attackCooldown: 1.5
-  maxAttackDuration: 1.5
+  maxAttackDuration: 2.5
   damage: 15
   attacksPerCommand: 1
   animator: {fileID: 764257490}
   animationDampTime: 0.1
   chaseAnimSpeed: 6
   attackTrigger: Attack
+  attackAnimationSpeed: 1
   attackBox: {fileID: 764257497}
   logAttack: 1
 --- !u!95 &764257490 stripped
@@ -1604,6 +1605,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36cee32719e594f4d8073254d9324d7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LaylaHealthBoost
+--- !u!114 &764257600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764257478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a8b9d3c7e5f2a1b6d4c8e9f2a3b7c1e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionAttackVariety
+  toggleParameter: UseKick
+  logSwaps: 0
 --- !u!114 &764257513
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4452,8 +4467,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6721237975893211393, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
       propertyPath: player
-      value: 
+      value:
       objectReference: {fileID: 1053582027}
+    - target: {fileID: 7676229215535578709, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      propertyPath: m_Controller
+      value:
+      objectReference: {fileID: 9100000, guid: 2e7a4f9c1b8d5a3e6c4d9f2b8a1e3d5f, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -4488,6 +4507,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
       insertIndex: -1
       addedObject: {fileID: 764257512}
+    - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 764257600}
   m_SourcePrefab: {fileID: 100100000, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
 --- !u!224 &4585217838906178966 stripped
 RectTransform:

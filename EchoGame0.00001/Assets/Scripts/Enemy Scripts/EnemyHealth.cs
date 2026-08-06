@@ -17,6 +17,13 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     private EnemyFollowPlayer follow;
     private bool isDead;
 
+    // Read-only, for companion target scoring ("finish the wounded one"). Same
+    // shape as Comapnion's and PlayerHealth's. Deliberately NOT via IHealable —
+    // implementing that would make enemies valid targets for NalediHealing.
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => maxHealth;
+    public float HealthFraction => maxHealth <= 0f ? 0f : currentHealth / maxHealth;
+
     void Awake()
     {
         follow = GetComponent<EnemyFollowPlayer>();

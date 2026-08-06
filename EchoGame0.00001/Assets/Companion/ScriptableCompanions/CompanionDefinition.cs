@@ -32,4 +32,8 @@ public class CompanionDefinition : ScriptableObject
 
     [Header("Stats")]
     public float maxHealth = 100f;
+
+    [Header("Combat")]
+    [Tooltip("Tuning for how this companion fights on their own. Leave empty for a companion who shouldn't — CompanionCombatBrain disables itself without one.")]
+    public CombatProfile combatProfile;
 }

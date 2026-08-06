@@ -1,8 +1,26 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
 public class Comapnion : MonoBehaviour, IDamageable, IHealable
 {
+    // Every live companion, maintained here so nothing has to sweep the scene to
+    // find teammates. Enemies poll this while deciding who to swing at, and the
+    // combat brain scores peel targets off it — both on a timer, both often
+    // enough that a FindObjectsOfType per caller would allocate constantly.
+    private static readonly List<Comapnion> active = new List<Comapnion>();
+    public static IReadOnlyList<Comapnion> Active => active;
+
+    void OnEnable()
+    {
+        if (!active.Contains(this)) active.Add(this);
+    }
+
+    void OnDisable()
+    {
+        active.Remove(this);
+    }
+
     [Header("Identity")]
     [Tooltip("Drag a companion asset here (e.g. Layla). Its name and health replace the values below. Leave empty to use the values below instead.")]
     [SerializeField] private CompanionDefinition definition;
