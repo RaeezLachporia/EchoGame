@@ -4951,6 +4951,10 @@ PrefabInstance:
       propertyPath: healthBar
       value: 
       objectReference: {fileID: 1200517954}
+    - target: {fileID: 702100519438374570, guid: c78fb608ecee69443941f19bb3d23d81, type: 3}
+      propertyPath: bonusHealthFill
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 1919077035132208599, guid: c78fb608ecee69443941f19bb3d23d81, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
