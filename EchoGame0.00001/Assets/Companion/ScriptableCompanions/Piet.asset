@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: Piet
   role: 1
   description: Piet is the scout for the group
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 9f823281bdf3bee49b2d5c669b185cc7, type: 3}
   prefab: {fileID: 0}
   maxHealth: 100

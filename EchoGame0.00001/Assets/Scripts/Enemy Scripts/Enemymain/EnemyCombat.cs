@@ -24,6 +24,12 @@ public class EnemyCombat : MonoBehaviour
 
     public bool isAttacking { get; private set; }
 
+    // How far this enemy's swing actually reaches, so a companion body-blocking
+    // for someone can stand at the real edge of the hit volume instead of a
+    // hardcoded guess that silently desyncs when these are retuned on the prefab.
+    public float AttackRange => attackRange;
+    public float HitForwardOffset => hitForwardOffset;
+
     private static readonly int AttackHash = Animator.StringToHash("Attack");
 
     private float cooldownRemaining;
@@ -62,8 +68,8 @@ public class EnemyCombat : MonoBehaviour
         if (cooldownRemaining > 0f) return;
 
         // Attacks belong to the Combat state. Alert stalks without swinging and
-        // Patrol obviously doesn't fight — so until the Combat state is wired up,
-        // no enemy initiates attacks. That's intentional staging, not a bug.
+        // Patrol obviously doesn't fight — the brain escalates Alert -> Combat after
+        // the player stays in sight for its timeToEngage, and only then do we swing.
         if (brain != null && brain.State != EnemyFollowPlayer.EnemyState.Combat) return;
 
         if (!TargetInHitbox()) return;
@@ -86,7 +92,10 @@ public class EnemyCombat : MonoBehaviour
         foreach (Collider hit in hits)
         {
             if (!hit.CompareTag(playerTag) && !hit.CompareTag(companionTag)) continue;
-            IDamageable damageable = hit.GetComponent<IDamageable>();
+            // GetComponentInParent, matching CompanionAttackBox: a tagged child
+            // hitbox still resolves up to the root that owns the health. With
+            // GetComponent, such a collider would swallow the hit silently.
+            IDamageable damageable = hit.GetComponentInParent<IDamageable>();
             damageable?.TakeDamage(damage);
         }
     }

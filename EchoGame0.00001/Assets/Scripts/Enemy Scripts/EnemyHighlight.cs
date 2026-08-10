@@ -9,11 +9,21 @@ public class EnemyHighlight : MonoBehaviour
     [Tooltip("Blend units per second — higher = snappier fade in/out.")]
     [SerializeField] private float fadeSpeed = 12f;
 
+    [Header("Hit Flash")]
+    [Tooltip("Colour flashed when this enemy is hit. White reads as impact; the aim highlight above stays red so the two never look the same.")]
+    [SerializeField] private Color flashColor = Color.white;
+    [Tooltip("How quickly the hit flash decays back out. Higher = snappier.")]
+    [SerializeField] private float flashFadeSpeed = 6f;
+
     private Renderer[] renderers;
     private Color[][] baseColors;      // per-renderer, per-submaterial cached original color
     private MaterialPropertyBlock block;
     private float blend;
     private bool highlighted;
+    // Hit flashes run THROUGH this component rather than tinting the enemy
+    // separately — otherwise they'd fight PlayerTargetHighlighter for the same
+    // material colours and whichever wrote last would win.
+    private float flash;
 
     // Set both — URP uses _BaseColor, Built-in uses _Color. Setting a property the
     // shader doesn't declare on an MPB is a no-op, so we avoid branching per-frame.
@@ -35,6 +45,7 @@ public class EnemyHighlight : MonoBehaviour
     {
         highlighted = false;
         blend = 0f;
+        flash = 0f;
         ApplyTint();
     }
 
@@ -64,14 +75,26 @@ public class EnemyHighlight : MonoBehaviour
         highlighted = on;
     }
 
+    // Punch the enemy to full flash colour, then let it decay. Called when a shot
+    // lands (PietDoubletap) so a hit reads on the target itself. Safe to call
+    // mid-highlight — the flash sits on top and the aim tint resumes underneath.
+    public void Flash()
+    {
+        flash = 1f;
+        ApplyTint();
+    }
+
     void Update()
     {
         float target = highlighted ? 1f : 0f;
-        float next = Mathf.MoveTowards(blend, target, fadeSpeed * Time.deltaTime);
+        float nextBlend = Mathf.MoveTowards(blend, target, fadeSpeed * Time.deltaTime);
+        float nextFlash = Mathf.MoveTowards(flash, 0f, flashFadeSpeed * Time.deltaTime);
+
         // Nothing changed — skip the per-renderer work entirely. Matters when a lot
         // of enemies exist and only one is being tinted at a time.
-        if (Mathf.Approximately(next, blend)) return;
-        blend = next;
+        if (Mathf.Approximately(nextBlend, blend) && Mathf.Approximately(nextFlash, flash)) return;
+        blend = nextBlend;
+        flash = nextFlash;
         ApplyTint();
     }
 
@@ -84,6 +107,10 @@ public class EnemyHighlight : MonoBehaviour
             for (int j = 0; j < mats.Length; j++)
             {
                 Color final = Color.Lerp(baseColors[i][j], highlightColor, t);
+                // Flash layers OVER the aim highlight rather than replacing it, so a
+                // hit still reads while the enemy is locked on and the red tint
+                // returns cleanly once the flash decays.
+                if (flash > 0f) final = Color.Lerp(final, flashColor, flash);
                 renderers[i].GetPropertyBlock(block, j);
                 block.SetColor(BaseColorId, final);
                 block.SetColor(ColorId, final);

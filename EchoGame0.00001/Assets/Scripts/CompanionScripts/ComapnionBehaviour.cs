@@ -27,6 +27,7 @@ public class ComapnionBehaviour : MonoBehaviour
     private BasicPlayerFollowScript follow;
     private CompanionCommand command;
     private CompanionAbility[] abilities;
+    private CompanionCombatBrain brain;
     private Rigidbody playerRb;
     private float playerStillTime;
     private float nextWanderTime;
@@ -37,6 +38,7 @@ public class ComapnionBehaviour : MonoBehaviour
         follow = GetComponent<BasicPlayerFollowScript>();
         command = GetComponent<CompanionCommand>();
         abilities = GetComponents<CompanionAbility>();
+        brain = GetComponent<CompanionCombatBrain>();
     }
 
     void Start()
@@ -64,6 +66,14 @@ public class ComapnionBehaviour : MonoBehaviour
 
         // If an ability is running (like Naledi off healing someone), don't wander.
         if (AnyAbilityBusy())
+        {
+            playerStillTime = 0f;
+            return;
+        }
+
+        // Autonomous combat outranks idling — she's in a fight. Checked before the
+        // follow test below, because the brain outranks follow too.
+        if (brain != null && brain.OwnsAgent)
         {
             playerStillTime = 0f;
             return;

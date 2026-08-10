@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: Layla
   role: 0
   description: A stalwart tank who soaks up damage on the front line.
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 89567dde084448943a8eecea5d983ee9, type: 3}
   prefab: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
   maxHealth: 400

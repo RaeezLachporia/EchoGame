@@ -9,8 +9,10 @@ using UnityEngine.AI;
 public class NalediHealing : CompanionAbility
 {
     [Header("Who To Heal")]
-    [Tooltip("She starts healing an ally when their health drops below this. 0.7 = below 70% health. She can heal herself too.")]
-    [SerializeField, Range(0f, 1f)] private float healThreshold = 0.7f;
+    [Tooltip("On = she heals hurt allies on her own when you haven't commanded her (anyone below Heal Threshold). Off = she only heals who you pick on the command wheel. A wheel-issued heal always works either way.")]
+    [SerializeField] private bool autoHealWhenIdle = true;
+    [Tooltip("Idle auto-heal only: she only steps in on her own once an ally drops below this — an emergency net under your wheel picks. 0.3 = below 30% health. She can heal herself too. Ignored when Auto Heal When Idle is off.")]
+    [SerializeField, Range(0f, 1f)] private float healThreshold = 0.3f;
     [Tooltip("Tick = she heals the player too. Untick = companions only.")]
     [SerializeField] private bool healPlayer = true;
     [Tooltip("How often (in seconds) she checks if anyone is hurt.")]
@@ -21,8 +23,8 @@ public class NalediHealing : CompanionAbility
     [SerializeField] private float healAmount = 30f;
     [Tooltip("Seconds she has to wait between heals.")]
     [SerializeField] private float healCooldown = 4f;
-    [Tooltip("How close she needs to stand to the ally to heal them.")]
-    [SerializeField] private float healRange = 2.5f;
+    [Tooltip("How close she walks to stand next to the ally before healing — she runs right up to them instead of healing from across the gap. Smaller = closer. Keep it under her follow distance or she'll heal without stepping in.")]
+    [SerializeField] private float approachDistance = 1.2f;
     [Tooltip("How long one heal takes. She stands still while casting and the health arrives at the end.")]
     [SerializeField] private float castDuration = 0.8f;
 
@@ -59,6 +61,11 @@ public class NalediHealing : CompanionAbility
 
     public override bool IsBusy => target != null || isCasting;
     public override float CooldownRemaining => Mathf.Max(0f, cooldownRemaining);
+
+    // The player picks who she heals from the ally wheel — TryActivate below is fed
+    // the chosen ally instead of the reticle enemy. The auto-heal in Update still
+    // runs as the idle fallback when she hasn't been commanded.
+    public override AbilityTargetKind TargetKind => AbilityTargetKind.AllyPicker;
 
     void Reset()
     {
@@ -108,6 +115,9 @@ public class NalediHealing : CompanionAbility
 
         if (target == null)
         {
+            // No commanded target. Only go looking for someone to heal on our own if
+            // the idle auto-heal is enabled — otherwise wait for a wheel command.
+            if (!autoHealWhenIdle) return;
             scanTimer -= Time.deltaTime;
             if (scanTimer > 0f) return;
             scanTimer = scanInterval;
@@ -127,7 +137,7 @@ public class NalediHealing : CompanionAbility
         Vector3 toAlly = targetTransform.position - transform.position;
         toAlly.y = 0f;
 
-        if (toAlly.magnitude > healRange)
+        if (toAlly.magnitude > approachDistance)
         {
             agent.speed = moveSpeed;
             agent.SetDestination(targetTransform.position);
@@ -142,20 +152,27 @@ public class NalediHealing : CompanionAbility
         UpdateAnimation();
     }
 
-    // Runs when the player picks HEAL on the command wheel. A commanded heal
-    // works even above the auto-heal threshold — anyone missing health counts.
+    // Runs when the player picks HEAL on the command wheel. The ally wheel hands us
+    // the specific ally the player chose — honour it: heal if they're hurt, decline
+    // if they're already full (the wheel keeps the picker open to choose again).
     public override bool TryActivate(Transform wheelTarget)
     {
         if (wheelTarget != null)
         {
             IHealable healable = wheelTarget.GetComponentInParent<IHealable>();
-            if (healable != null && healable.CurrentHealth < healable.MaxHealth)
+            if (healable != null)
             {
-                SetTarget(healable, wheelTarget);
-                return true;
+                if (healable.CurrentHealth < healable.MaxHealth)
+                {
+                    SetTarget(healable, wheelTarget);
+                    return true;
+                }
+                if (logHealing) Debug.Log($"[NalediHealing] {wheelTarget.name} is already at full health — not healing.", this);
+                return false;
             }
         }
 
+        // No specific ally passed (legacy / non-ally target) — auto-pick whoever's hurt.
         FindWoundedAlly(1f);
         if (logHealing && target == null) Debug.Log("[NalediHealing] Heal commanded but everyone is at full health.", this);
         return target != null;

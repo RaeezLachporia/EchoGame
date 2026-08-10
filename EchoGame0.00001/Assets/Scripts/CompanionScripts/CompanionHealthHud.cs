@@ -9,6 +9,9 @@ public class CompanionHealthHud : MonoBehaviour
     [Tooltip("Drag the CompanionDatabase asset here so companions keep the same bar order as the list — first in the list gets the top bar.")]
     [SerializeField] private CompanionDatabase database;
 
+    [Tooltip("Log which companion claims which HUD bar, and the max health each bar is scaled to. Use this when a bar looks like it belongs to the wrong companion or drains at the wrong rate.")]
+    [SerializeField] private bool logSlots = true;
+
     private readonly Object[] occupants = new Object[4];
 
     void Awake()
@@ -75,6 +78,10 @@ public class CompanionHealthHud : MonoBehaviour
         slots[slot].SetName(displayName);
         slots[slot].Initialize(maxHealth, currentHealth);
         slots[slot].Show();
+        // A bar scaled to the wrong companion's max drains at the wrong rate and
+        // looks like a desync — name the pairing so it's checkable at a glance.
+        if (logSlots)
+            Debug.Log($"[CompanionHealthHud] Bar {slot} ('{slots[slot].name}') → {displayName}, scaled to {currentHealth}/{maxHealth}.", slots[slot]);
         return slot;
     }
 

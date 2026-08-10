@@ -68,11 +68,18 @@ public class BasicPlayerFollowScript : MonoBehaviour
     private InputManager playerInput;
     private CompanionCommand command;
     private CompanionAbility[] abilities;
+    private CompanionCombatBrain brain;
     private bool isFollowing = false;
     private bool isJumping = false;
 
     public bool IsFollowing => isFollowing;
     public NavMeshAgent Agent => agent;
+
+    // JumpAcrossLink writes transform.position directly every frame, so anything
+    // else calling SetDestination during a hop fights the manual write and the
+    // companion stutters mid-air. CompanionCombatBrain checks this before it takes
+    // the agent.
+    public bool IsJumping => isJumping;
 
     // Local-space offsets behind the player for slots 0..3 (x = right, z = forward).
     // Negative z = behind the player. Two close-behind slots and two wider flanking slots.
@@ -107,6 +114,7 @@ public class BasicPlayerFollowScript : MonoBehaviour
 
         command = GetComponent<CompanionCommand>();
         abilities = GetComponents<CompanionAbility>();
+        brain = GetComponent<CompanionCombatBrain>();
 
         if (animator == null)
             animator = GetComponent<Animator>();
@@ -157,6 +165,15 @@ public class BasicPlayerFollowScript : MonoBehaviour
         // If an ability is running (like Naledi off healing someone), don't follow —
         // the ability is steering the companion right now.
         if (AnyAbilityBusy())
+        {
+            isFollowing = false;
+            return;
+        }
+
+        // Autonomous combat outranks following: she's holding a line, blocking a
+        // hit, or backing off, and all three mean going somewhere other than her
+        // formation slot. Null-safe, so companions without a brain are unaffected.
+        if (brain != null && brain.OwnsAgent)
         {
             isFollowing = false;
             return;

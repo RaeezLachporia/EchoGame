@@ -1,8 +1,26 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
 public class Comapnion : MonoBehaviour, IDamageable, IHealable
 {
+    // Every live companion, maintained here so nothing has to sweep the scene to
+    // find teammates. Enemies poll this while deciding who to swing at, and the
+    // combat brain scores peel targets off it — both on a timer, both often
+    // enough that a FindObjectsOfType per caller would allocate constantly.
+    private static readonly List<Comapnion> active = new List<Comapnion>();
+    public static IReadOnlyList<Comapnion> Active => active;
+
+    void OnEnable()
+    {
+        if (!active.Contains(this)) active.Add(this);
+    }
+
+    void OnDisable()
+    {
+        active.Remove(this);
+    }
+
     [Header("Identity")]
     [Tooltip("Drag a companion asset here (e.g. Layla). Its name and health replace the values below. Leave empty to use the values below instead.")]
     [SerializeField] private CompanionDefinition definition;
@@ -12,6 +30,8 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
     [Header("Health")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth = 100f;
+    [Tooltip("Log every hit this companion takes, showing whether a resistance buff reduced it.")]
+    [SerializeField] private bool logDamage = true;
 
     [Header("Push Response")]
     [Tooltip("Scales player impact speed into companion push speed. 0.3 = a 6 m/s sprint pushes the companion at ~1.8 m/s.")]
@@ -137,17 +157,65 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
 
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
+    // The name shown on the HUD bar and the floating panel. Reads the definition's
+    // name once one is applied, and the inspector fallback until then.
+    public string DisplayName => displayName;
     // The command wheel reads this to put the companion's portrait on its slice.
     public CompanionDefinition Definition => definition;
 
     public void TakeDamage(float damage)
     {
-        currentHealth = Mathf.Max(0f, currentHealth - damage);
+        // A damage-resistance buff (Zara's) scales the hit down before it lands.
+        // Done here rather than at the attacker so every damage source is covered.
+        float incoming = damage;
+        AllyBuff buff = GetComponent<AllyBuff>();
+        if (buff != null && buff.DamageMultiplier < 1f)
+        {
+            incoming = damage * buff.DamageMultiplier;
+            if (logDamage)
+                Debug.Log($"[Comapnion] {displayName} BUFFED hit: {damage} x{buff.DamageMultiplier:F2} = {incoming} damage ({buff.SecondsRemaining:F1}s of buff left).", this);
+        }
+        else if (logDamage)
+        {
+            Debug.Log($"[Comapnion] {displayName} normal hit: {incoming} damage.", this);
+        }
+
+        currentHealth = Mathf.Max(0f, currentHealth - incoming);
         if (CompanionHealthHud.Instance != null)
             CompanionHealthHud.Instance.SetHealth(hudSlot, currentHealth);
 
         if (currentHealth <= 0f)
             Destroy(gameObject);
+    }
+
+    // Temporary max-health boost (Layla's taunt). The bonus is granted as real
+    // health too, so it's usable the moment it lands rather than being empty
+    // headroom she has to be healed into.
+    public void ApplyMaxHealthBonus(float bonus)
+    {
+        if (bonus <= 0f) return;
+        maxHealth += bonus;
+        currentHealth += bonus;
+        PushMaxHealthToHud();
+    }
+
+    // Removing clamps current health DOWN to the reduced max — losing the boost
+    // should cost her the temporary hit points, not leave her over her own cap.
+    public void RemoveMaxHealthBonus(float bonus)
+    {
+        if (bonus <= 0f) return;
+        maxHealth = Mathf.Max(1f, maxHealth - bonus);
+        currentHealth = Mathf.Min(currentHealth, maxHealth);
+        PushMaxHealthToHud();
+    }
+
+    private void PushMaxHealthToHud()
+    {
+        if (CompanionHealthHud.Instance == null) return;
+        // refill: false — we manage currentHealth above; a refill would silently
+        // top her up every time the boost expires.
+        CompanionHealthHud.Instance.SetMaxHealth(hudSlot, maxHealth, false);
+        CompanionHealthHud.Instance.SetHealth(hudSlot, currentHealth);
     }
 
     public void Heal(float amount)

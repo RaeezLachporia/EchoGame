@@ -17,6 +17,6 @@ MonoBehaviour:
   role: 2
   description: "Naledi Is the paramedic healer of the group. Her only job is to sustain
     and keep the team alive\n "
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 45e60b870013b3f4c95145bbc324c475, type: 3}
   prefab: {fileID: 0}
   maxHealth: 150

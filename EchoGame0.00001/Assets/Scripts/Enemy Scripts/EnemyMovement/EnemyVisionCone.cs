@@ -101,6 +101,13 @@ public class EnemyVisionCone : MonoBehaviour
     // running in Update would leave the cone one frame behind their facing.
     void LateUpdate()
     {
+        // The cone is a stealth-detection read-out (patrol / searching / spotted).
+        // Once the enemy commits to Combat the fight is on and the cone is just
+        // clutter — hide the whole fan. It comes back if the enemy de-escalates.
+        bool show = enemy.State != EnemyFollowPlayer.EnemyState.Combat;
+        if (meshRenderer.enabled != show) meshRenderer.enabled = show;
+        if (!show) return;
+
         if (clipToObstacles) UpdateFan();
         UpdateColor();
     }
@@ -136,7 +143,8 @@ public class EnemyVisionCone : MonoBehaviour
         {
             EnemyFollowPlayer.EnemyState.Alert =>
                 enemy.PlayerInSight ? alertSightColor : alertSearchColor,
-            // Combat isn't reachable yet; when it lands it reads as full red too.
+            // Combat hides the cone entirely (see LateUpdate); this case only tints
+            // the brief lerp frames as it de-escalates back out of Combat.
             EnemyFollowPlayer.EnemyState.Combat => alertSightColor,
             _ => patrolColor,
         };

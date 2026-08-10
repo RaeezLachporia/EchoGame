@@ -10,8 +10,15 @@ public class CameraManager : MonoBehaviour
 
     private Vector3 cameraFollowVelocity = Vector3.zero;
     public float cameraFollowSpeed = 0.2f;
+    // Mouse: degrees per pixel of delta. Mouse delta is already a per-frame
+    // measurement, so these must NOT be scaled by deltaTime.
     public float cameraLookSpeed = 2f;
     public float cameraPivotSpeed = 2f;
+    // Stick: degrees per second. The stick reports a held position rather than
+    // a movement, so these MUST be scaled by deltaTime or the turn rate ends up
+    // riding on the frame rate.
+    public float stickLookSpeed = 180f;
+    public float stickPivotSpeed = 120f;
     public float lookAngle;
     public float pivotAngle;
     public float minimumPivotAngle = -35f;
@@ -48,8 +55,20 @@ public class CameraManager : MonoBehaviour
     
     private void RotateCamera()
     {
-        lookAngle  += inputManager.cameraInputX * cameraLookSpeed;
-        pivotAngle -= inputManager.cameraInputY * cameraPivotSpeed;
+        if (inputManager.cameraInputIsMouse)
+        {
+            lookAngle  += inputManager.cameraInputX * cameraLookSpeed;
+            pivotAngle -= inputManager.cameraInputY * cameraPivotSpeed;
+        }
+        else
+        {
+            // Cap the step so a frame hitch doesn't whip the camera around
+            // while the stick is held.
+            float delta = Mathf.Min(Time.deltaTime, 0.05f);
+            lookAngle  += inputManager.cameraInputX * stickLookSpeed * delta;
+            pivotAngle -= inputManager.cameraInputY * stickPivotSpeed * delta;
+        }
+
         pivotAngle = Mathf.Clamp(pivotAngle, minimumPivotAngle, maximumPivotAngle); // stop the camera flipping over
 
         Vector3 rotation = Vector3.zero;
@@ -82,10 +101,13 @@ public class CameraManager : MonoBehaviour
         if (Mathf.Abs(targetCameraZOffset) < cameraCollisionOffset)
             targetCameraZOffset = -cameraCollisionOffset;
 
-        // Snap in fast when hitting, ease out slowly when clearing
+        // Snap in fast when hitting, ease out slowly when clearing. Rates are
+        // per second and converted with Exp so the ease takes the same wall-clock
+        // time at any frame rate — a flat Lerp factor would make it frame-dependent.
         Vector3 localPos = cameraTransform.localPosition;
-        float smoothSpeed = targetCameraZOffset < localPos.z ? 0.02f : 0.15f;
-        localPos.z = Mathf.Lerp(localPos.z, targetCameraZOffset, smoothSpeed);
+        float smoothRate = targetCameraZOffset < localPos.z ? 60f : 10f;
+        localPos.z = Mathf.Lerp(localPos.z, targetCameraZOffset,
+            1f - Mathf.Exp(-smoothRate * Time.deltaTime));
         cameraTransform.localPosition = localPos;
     }
 
