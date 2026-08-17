@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class EnemyHealth : MonoBehaviour, IDamageable
 {
@@ -9,6 +10,8 @@ public class EnemyHealth : MonoBehaviour, IDamageable
 
     [Header("UI (optional)")]
     [SerializeField] private Slider healthSlider;
+    [Tooltip("Optional TMP text on the enemy's world-space health canvas. Format matches HealthBarUi: \"cur / max\".")]
+    [SerializeField] private TMP_Text healthLabel;
 
     [Header("Debug")]
     [Tooltip("Log every hit this enemy takes, showing whether a debuff amplified it. Handy for confirming the debuff actually changes incoming damage.")]
@@ -43,6 +46,7 @@ public class EnemyHealth : MonoBehaviour, IDamageable
             healthSlider.value = currentHealth;
             healthSlider.interactable = false;
         }
+        RefreshHealthLabel();
     }
 
     public void TakeDamage(float damage)
@@ -70,6 +74,7 @@ public class EnemyHealth : MonoBehaviour, IDamageable
 
         currentHealth = Mathf.Max(0f, currentHealth - incoming);
         if (healthSlider != null) healthSlider.value = currentHealth;
+        RefreshHealthLabel();
 
         if (currentHealth <= 0f)
         {
@@ -79,5 +84,11 @@ public class EnemyHealth : MonoBehaviour, IDamageable
             if (follow != null) follow.ReturnToPool();
             else Destroy(gameObject);
         }
+    }
+
+    private void RefreshHealthLabel()
+    {
+        if (healthLabel == null) return;
+        healthLabel.text = Mathf.CeilToInt(currentHealth) + " / " + Mathf.CeilToInt(maxHealth);
     }
 }

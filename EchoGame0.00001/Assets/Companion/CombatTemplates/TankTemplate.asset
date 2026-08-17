@@ -9,11 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 832019e59b113c64ba7ee0abeee6d7a9, type: 3}
-  m_Name: Layla
-  m_EditorClassIdentifier: Assembly-CSharp::CombatProfile
-  template: {fileID: 11400000, guid: 4c8d1f60a3b74e29857f0c2d6b91e3a4, type: 2}
-  archetypeNote: 
+  m_Script: {fileID: 11500000, guid: 7f3a9c21e5b84d6e9a0c1f27b3d84e60, type: 3}
+  m_Name: TankTemplate
+  m_EditorClassIdentifier: Assembly-CSharp::CombatProfileTemplate
+  role: 0
+  summary: 'Tank archetype. Holds the front line and soaks what would otherwise reach
+    the party. Intercept ON - body-blocking is the whole job. Low self-preserve threshold:
+    eating damage down past a third is the point, not a mistake. Short leash and a
+    modest engage radius keep a tank a wall rather than a chaser.'
   senseRadius: 14
   disengageRadius: 18
   engageRadius: 8
@@ -43,5 +46,3 @@ MonoBehaviour:
   weightSwinging: 1
   weightWounded: 1.2
   weightDistance: 1.5
-  defaultPeelWeight: 1
-  peelWeights: []

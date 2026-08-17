@@ -1640,7 +1640,42 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CompanionAttackVariety
   toggleParameter: UseKick
-  logSwaps: 0
+  logSwaps: 1
+--- !u!114 &764257606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764257478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cdf779e1e6cd26498202b0b98af4d3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionCombatBrain
+  profileOverride: {fileID: 11400000, guid: 6d779703e05a90941a9472f7276bb862, type: 2}
+  player: {fileID: 1053582027}
+  animator: {fileID: 764257490}
+  animationDampTime: 0.1
+  stateDisplay: 0
+  logStateChanges: 1
+--- !u!114 &764257607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764257478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cc40b0ac42cb944ab1174a999100a00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionThreatSensor
+  enemyMask:
+    serializedVersion: 2
+    m_Bits: 128
+  drawGizmos: 1
+  logTargeting: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -4518,6 +4553,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
       insertIndex: -1
       addedObject: {fileID: 764257600}
+    - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 764257607}
+    - targetCorrespondingSourceObject: {fileID: 6248528066991253163, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 764257606}
   m_SourcePrefab: {fileID: 100100000, guid: 900af288353289d4ea7a36c4b3d6ff02, type: 3}
 --- !u!224 &4585217838906178966 stripped
 RectTransform:

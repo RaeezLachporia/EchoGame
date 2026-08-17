@@ -10,28 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 832019e59b113c64ba7ee0abeee6d7a9, type: 3}
-  m_Name: Layla
+  m_Name: Piet
   m_EditorClassIdentifier: Assembly-CSharp::CombatProfile
-  template: {fileID: 11400000, guid: 4c8d1f60a3b74e29857f0c2d6b91e3a4, type: 2}
+  template: {fileID: 11400000, guid: 9a25e7b13d0c46f8b21e5a97c4d60f38, type: 2}
   archetypeNote: 
-  senseRadius: 14
-  disengageRadius: 18
-  engageRadius: 8
-  leashRadius: 10
-  leashResumeRadius: 7
+  senseRadius: 16
+  disengageRadius: 20
+  engageRadius: 12
+  leashRadius: 12
+  leashResumeRadius: 9
   targetLeashSlack: 3
   scanInterval: 0.15
   reactionDelay: 0.15
-  anchorDistance: 2.75
+  anchorDistance: 3.5
   anchorFanAngle: 0
   anchorFanSign: 0
   moveSpeed: 4.5
   moveAnimSpeed: 6
   rotationSpeed: 10
-  selfPreserveEnter: 0.3
-  selfPreserveExit: 0.45
+  selfPreserveEnter: 0.45
+  selfPreserveExit: 0.65
   selfPreserveRadius: 6
-  interceptEnabled: 1
+  interceptEnabled: 0
   interceptTriggerRange: 6
   blockPadding: 0.3
   minPlayerClearance: 1
@@ -41,7 +41,7 @@ MonoBehaviour:
   weightTargetsMe: 1.5
   weightTargetsAlly: 2
   weightSwinging: 1
-  weightWounded: 1.2
+  weightWounded: 1.5
   weightDistance: 1.5
   defaultPeelWeight: 1
   peelWeights: []

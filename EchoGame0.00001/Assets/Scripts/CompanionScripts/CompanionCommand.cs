@@ -51,6 +51,7 @@ public class CompanionCommand : MonoBehaviour
     [SerializeField] private bool logAttack = false;
 
     private NavMeshAgent agent;
+    private BasicPlayerFollowScript follow;
     private Transform targetEnemy;
     private float cooldownRemaining;
     private float attackElapsed;
@@ -81,6 +82,7 @@ public class CompanionCommand : MonoBehaviour
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        follow = GetComponent<BasicPlayerFollowScript>();
         if (animator == null) animator = GetComponent<Animator>();
         if (attackBox == null) attackBox = GetComponent<CompanionAttackBox>();
         attackTriggerHash = Animator.StringToHash(attackTrigger);
@@ -145,6 +147,10 @@ public class CompanionCommand : MonoBehaviour
     {
         if (cooldownRemaining > 0f) cooldownRemaining -= Time.deltaTime;
 
+        // A link traversal writes transform.position directly every frame; running
+        // any of our steering/attack logic during it fights the manual write.
+        if (follow != null && follow.IsJumping) return;
+
         if (IsAttacking)
         {
             attackElapsed += Time.deltaTime;
@@ -155,6 +161,17 @@ public class CompanionCommand : MonoBehaviour
             {
                 IsAttacking = false;
                 OnSwingFinished();
+            }
+            // Track a strafing target through the swing — StartAttack snapped the first frame.
+            if (targetEnemy != null && targetEnemy.gameObject.activeInHierarchy)
+            {
+                Vector3 toEnemyDuringSwing = targetEnemy.position - transform.position;
+                toEnemyDuringSwing.y = 0f;
+                if (toEnemyDuringSwing.sqrMagnitude > 0.0001f)
+                {
+                    Quaternion swingLook = Quaternion.LookRotation(toEnemyDuringSwing.normalized);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, swingLook, rotationSpeed * Time.deltaTime);
+                }
             }
             UpdateAnimation();
             return;
@@ -176,6 +193,15 @@ public class CompanionCommand : MonoBehaviour
 
         if (distance > attackRange)
         {
+            // Path routed through a NavMeshLink (target on another mesh — e.g. a
+            // lower level). Auto-traverse is off, so nothing crosses it during a
+            // command unless we trigger the hop; without this the companion freezes
+            // on the link.
+            if (agent.isOnOffMeshLink && follow != null)
+            {
+                follow.BeginLinkTraversal();
+                return;
+            }
             agent.speed = chaseSpeed;
             agent.SetDestination(targetEnemy.position);
         }
@@ -203,6 +229,15 @@ public class CompanionCommand : MonoBehaviour
         // One swing off the budget. If it hits 0, OnSwingFinished ends the command
         // after this swing finishes playing.
         attacksRemaining--;
+        // Snap facing on the swing frame — the Update Slerp only gets one tick before
+        // the IsAttacking early-return locks the rotation for the rest of the swing.
+        if (targetEnemy != null)
+        {
+            Vector3 toEnemy = targetEnemy.position - transform.position;
+            toEnemy.y = 0f;
+            if (toEnemy.sqrMagnitude > 0.0001f)
+                transform.rotation = Quaternion.LookRotation(toEnemy.normalized);
+        }
         if (animator != null) animator.SetTrigger(attackTriggerHash);
         if (logAttack) Debug.Log($"[CompanionCommand] {name} StartAttack — swing {attacksPerCommand - attacksRemaining}/{attacksPerCommand}, SetTrigger('{attackTrigger}').", this);
     }

@@ -81,6 +81,16 @@ public class BasicPlayerFollowScript : MonoBehaviour
     // the agent.
     public bool IsJumping => isJumping;
 
+    // Kick off a link traversal externally. CompanionCommand needs this: during a
+    // chase our Update stands down (HasActiveCommand), so nothing was picking up
+    // links reached mid-command and the companion froze on them. Guarded so the
+    // follow script and the command seeing the link on the same frame can't spawn
+    // two overlapping coroutines.
+    public void BeginLinkTraversal()
+    {
+        if (!isJumping) StartCoroutine(JumpAcrossLink());
+    }
+
     // Local-space offsets behind the player for slots 0..3 (x = right, z = forward).
     // Negative z = behind the player. Two close-behind slots and two wider flanking slots.
     private static readonly Vector3[] SlotDirections =

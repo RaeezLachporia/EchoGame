@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f3a9c21e5b84d6e9a0c1f27b3d84e60, type: 3}
+  m_Name: SupportTemplate
+  m_EditorClassIdentifier: Assembly-CSharp::CombatProfileTemplate
+  role: 2
+  summary: 'Support archetype. Stays close to the party and keeps line of sight for
+    heals and buffs. Intercept OFF. Tight leash and small engage radius - a healer
+    who wanders into melee stops healing. Highest self-preserve threshold of any role:
+    a downed healer usually means the fight is already lost, so pull back early and
+    generously.'
+  senseRadius: 12
+  disengageRadius: 15
+  engageRadius: 6
+  leashRadius: 8
+  leashResumeRadius: 6
+  targetLeashSlack: 2
+  scanInterval: 0.15
+  reactionDelay: 0.2
+  anchorDistance: 3
+  anchorFanAngle: 0
+  anchorFanSign: 0
+  moveSpeed: 4.5
+  moveAnimSpeed: 6
+  rotationSpeed: 10
+  selfPreserveEnter: 0.5
+  selfPreserveExit: 0.7
+  selfPreserveRadius: 7
+  interceptEnabled: 0
+  interceptTriggerRange: 6
+  blockPadding: 0.3
+  minPlayerClearance: 1
+  fallbackEnemyReach: 2.3
+  disengageLinger: 1.2
+  reEngageCooldown: 0.5
+  weightTargetsMe: 1.5
+  weightTargetsAlly: 2
+  weightSwinging: 1
+  weightWounded: 0.8
+  weightDistance: 1.8

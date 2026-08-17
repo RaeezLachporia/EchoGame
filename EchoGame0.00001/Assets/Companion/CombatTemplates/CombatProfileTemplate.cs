@@ -1,38 +1,34 @@
-using System.Collections.Generic;
 using UnityEngine;
 
-// One asset per companion. Everything that makes Layla fight like Layla lives in
-// here as numbers — CompanionCombatBrain's decision loop is shared and never
-// forks per character. When Piet or Naledi get a brain, they get their own
-// profile asset and the same loop reads it.
+// The baseline numbers for a ROLE, not a character. One asset per CompanionRole:
+// TankTemplate, DamageTemplate, SupportTemplate, ControllerTemplate.
 //
-// Start one from a CombatProfileTemplate (one per role) rather than from scratch:
-// assign the template, hit "Sync From Template", then override only the handful of
-// fields that make this character themselves. Sync is a one-shot copy, not live
-// inheritance — see CombatProfileTemplate for why.
+// A CombatProfile points at one of these and can copy its values in ("Sync From
+// Template" on the profile's inspector). After that the profile owns its own
+// numbers — this is a starting point and a reference to diff against, NOT a live
+// parent. That's deliberate: a designer who spent an afternoon tuning one
+// companion should never have that silently overwritten because someone rebalanced
+// the role. The profile's inspector marks every field that differs from here, so
+// the deviations stay visible instead of becoming invisible drift.
 //
-// Right-click in the Project window > Create > EchoGame > Combat Profile.
-[CreateAssetMenu(fileName = "NewCombatProfile", menuName = "EchoGame/Combat Profile")]
-public class CombatProfile : ScriptableObject
+// Field names MUST stay identical to CombatProfile's. The sync and the diff both
+// match by serialized property name, so a rename on one side silently drops that
+// field out of the system.
+//
+// Right-click in the Project window > Create > EchoGame > Combat Profile Template.
+[CreateAssetMenu(fileName = "NewCombatProfileTemplate", menuName = "EchoGame/Combat Profile Template")]
+public class CombatProfileTemplate : ScriptableObject
 {
-    // One entry per companion this character will go out of their way for. The id
-    // matches CompanionDefinition.id ("layla", "naledi", ...). Nobody has to script
-    // "Layla and Naledi are close" — a 1.3 here is that relationship, expressed as
-    // a half-beat sooner and a couple of metres further.
-    [System.Serializable]
-    public struct PeelWeight
-    {
-        [Tooltip("CompanionDefinition.id of the ally, e.g. \"naledi\".")]
-        public string companionId;
-        [Tooltip("Multiplier on how urgently this ally gets protected. >1 = prioritised.")]
-        public float weight;
-    }
-
     [Header("Archetype")]
-    [Tooltip("The role baseline this character started from. Purely an authoring aid — nothing reads it at runtime. Its inspector marks every field below that differs from the template, and offers a one-click resync.")]
-    public CombatProfileTemplate template;
-    [Tooltip("What this character is supposed to FEEL like, in two sentences. The numbers below drift over a production; this is the only record of what they were drifting toward.")]
-    [TextArea(2, 5)] public string archetypeNote;
+    [Tooltip("Which CompanionRole this template is the baseline for. Documentation for whoever opens it — nothing branches on this at runtime.")]
+    public CompanionRole role = CompanionRole.Damage;
+    [Tooltip("Shown as the info banner on every CombatProfile using this template. Say what the archetype is TRYING to feel like, in plain English — six months from now this is the only record of intent.")]
+    [TextArea(3, 8)] public string summary;
+
+    // ---- Everything below mirrors CombatProfile field-for-field, minus the peel
+    // priority block. Peel weights encode "who does this character go out of their
+    // way for", which is a relationship between two specific companions and can
+    // never come from a role.
 
     [Header("Engagement")]
     [Tooltip("Radius around the PLAYER that gets scanned for enemies. Enemies inside it exist as far as this companion is concerned.")]
@@ -72,13 +68,13 @@ public class CombatProfile : ScriptableObject
     [Header("Self-Preservation")]
     [Tooltip("Health fraction at which she pulls back. Low = she soaks more than she safely should, which for a tank is the point.")]
     [Range(0f, 1f)] public float selfPreserveEnter = 0.30f;
-    [Tooltip("Health fraction she must climb back above before rejoining. Must exceed Enter. NOTE: Layla's own taunt grants +150 max AND current health, which jumps her fraction mid-fight — the gap between these two values is what makes that read as 'the taunt steadied her' instead of a flicker.")]
+    [Tooltip("Health fraction she must climb back above before rejoining. Must exceed Enter — the gap is what stops chip damage flickering her in and out.")]
     [Range(0f, 1f)] public float selfPreserveExit = 0.45f;
     [Tooltip("How far from the player she retreats. She pulls to the edge of the fight, never out of it.")]
     public float selfPreserveRadius = 6f;
 
     [Header("Intercept")]
-    [Tooltip("Off = she never body-blocks, she only anchors and attacks.")]
+    [Tooltip("Off = she never body-blocks, she only anchors and attacks. Usually only Tanks want this on.")]
     public bool interceptEnabled = true;
     [Tooltip("How close an enemy must be to its victim before she throws herself in the way.")]
     public float interceptTriggerRange = 6f;
@@ -100,31 +96,15 @@ public class CombatProfile : ScriptableObject
     public float weightTargetsMe = 1.5f;
     [Tooltip("Weight for an enemy attacking someone I'm protecting.")]
     public float weightTargetsAlly = 2f;
-    [Tooltip("Weight for an enemy mid-swing — it's about to land a hit.")]
+    [Tooltip("Weight for an enemy mid-swing — it's about to land a hit. Controllers push this up: a debuff landing mid-swing amplifies the hit that's already committed.")]
     public float weightSwinging = 1f;
-    [Tooltip("Weight on how hurt the enemy is. Higher = more inclined to finish a wounded one.")]
+    [Tooltip("Weight on how hurt the enemy is. Higher = more inclined to finish a wounded one. Damage roles push this up; Controllers push it DOWN — a dying enemy doesn't need a debuff spent on it.")]
     public float weightWounded = 1.2f;
     [Tooltip("Penalty for distance. Higher = strongly prefers what's already in reach.")]
     public float weightDistance = 1.5f;
 
-    [Header("Peel Priority")]
-    [Tooltip("Baseline urgency for allies not listed below.")]
-    public float defaultPeelWeight = 1f;
-    [Tooltip("Per-ally overrides. Layla covers everyone, so keep these at or above 1 — playing favourites in a crisis isn't who she is; some people just get reached first.")]
-    public List<PeelWeight> peelWeights = new List<PeelWeight>();
-
-    public float PeelWeightFor(string companionId)
-    {
-        if (!string.IsNullOrEmpty(companionId))
-        {
-            for (int i = 0; i < peelWeights.Count; i++)
-                if (peelWeights[i].companionId == companionId) return peelWeights[i].weight;
-        }
-        return defaultPeelWeight;
-    }
-
-    // Catches the ordering mistakes that turn into stutter or a companion who
-    // never re-engages, at author time instead of after twenty minutes of play.
+    // Same invariants CombatProfile enforces. Catching them here means a broken
+    // template can't seed four broken profiles before anyone notices.
     void OnValidate()
     {
         disengageRadius = Mathf.Max(disengageRadius, senseRadius + 0.5f);
