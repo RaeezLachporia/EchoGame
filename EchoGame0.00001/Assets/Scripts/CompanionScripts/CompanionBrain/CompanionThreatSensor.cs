@@ -69,6 +69,44 @@ public class CompanionThreatSensor : MonoBehaviour
     // Mean position of everything currently engaged — the direction of "the fight".
     public Vector3 EngagedCentroid { get; private set; }
 
+    // True if any threat's chosen victim is HER — reads the flag Describe already
+    // computes off enemy.CurrentTarget, so this is essentially free. Brain
+    // extensions use it to detect the Focus system: whenever an enemy sets its
+    // focus onto this companion, CurrentTarget flips and targetsMe goes true.
+    public bool HasThreatTargetingMe
+    {
+        get
+        {
+            for (int i = 0; i < threats.Count; i++)
+                if (threats[i].targetsMe) return true;
+            return false;
+        }
+    }
+
+    // Pick the closest threat within a radius of HER, not the player. Used by
+    // pacifist extensions like Naledi's — when she does fight, she doesn't
+    // strategise, she swings at whatever is on her. Score-based Primary would
+    // stay pinned on a wounded enemy further off while a healthy one bites her.
+    public bool TryGetNearestSelfWithin(float radius, out Threat nearest)
+    {
+        nearest = default;
+        if (radius <= 0f) return false;
+
+        float best = float.MaxValue;
+        bool found = false;
+        for (int i = 0; i < threats.Count; i++)
+        {
+            Threat t = threats[i];
+            if (t.transform == null) continue;
+            if (t.distanceToSelf > radius) continue;
+            if (t.distanceToSelf >= best) continue;
+            best = t.distanceToSelf;
+            nearest = t;
+            found = true;
+        }
+        return found;
+    }
+
     public void Initialize(Comapnion owner, CombatProfile combatProfile, Transform playerTransform)
     {
         self = owner;

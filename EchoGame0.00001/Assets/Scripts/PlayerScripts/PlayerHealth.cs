@@ -8,6 +8,11 @@ public class PlayerHealth : MonoBehaviour, IDamageable, IHealable
     public float CurrentHealth => playerUi != null ? playerUi.CurrentHealth : 0f;
     public float MaxHealth => playerUi != null ? playerUi.MaxHealth : 0f;
 
+    // Placeholder until the downed-but-revivable state exists. Same shape as
+    // Comapnion.IsDown — brain party-emergency triggers can read this today and
+    // start firing correctly the moment the real downed state is wired in.
+    public bool IsDown => false;
+
     public void TakeDamage(float damage)
     {
         // A damage-resistance buff (Zara's) scales the hit down before it lands.

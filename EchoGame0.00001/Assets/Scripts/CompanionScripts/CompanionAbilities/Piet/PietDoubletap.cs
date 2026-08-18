@@ -148,10 +148,12 @@ public class PietDoubletap : CompanionAbility
 
         if (phase == Phase.Idle) return;
 
-        // A normal ATTACK order from the player beats a queued Double Tap.
-        if (command != null && command.HasActiveCommand)
+        // A PLAYER-issued attack beats a queued Double Tap — but a brain-issued
+        // one must not, or the ability cancels itself the instant the autonomous
+        // brain has a command in flight (which is most of any real fight).
+        if (command != null && command.HasPlayerCommand)
         {
-            Cancel("an attack order came in");
+            Cancel("a player attack order came in");
             return;
         }
 

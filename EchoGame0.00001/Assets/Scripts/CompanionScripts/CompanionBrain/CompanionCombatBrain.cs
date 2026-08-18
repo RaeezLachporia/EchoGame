@@ -23,6 +23,12 @@ using UnityEngine.AI;
 [RequireComponent(typeof(CompanionCommand))]
 [RequireComponent(typeof(CompanionThreatSensor))]
 [DisallowMultipleComponent]
+// Runs BEFORE CompanionAbility subclasses (default 0) so the brain's hard
+// guards (player command / ability busy) get to cancel any brain-owned
+// CompanionCommand this frame before an ability's Update reads the command's
+// state. Without this the update order is undefined and the "who cancels
+// whom" race resolves differently frame to frame.
+[DefaultExecutionOrder(-100)]
 public class CompanionCombatBrain : MonoBehaviour
 {
     public enum BrainState
@@ -37,6 +43,10 @@ public class CompanionCombatBrain : MonoBehaviour
     [Header("Tuning")]
     [Tooltip("Overrides the profile on this companion's CompanionDefinition. Handy for testing one companion without editing the shared asset.")]
     [SerializeField] private CombatProfile profileOverride;
+
+    [Header("Character Extension")]
+    [Tooltip("Optional per-character brain layer. Called BEFORE the vanilla Evaluate and its decision wins outright — the profile is the foundation of the role, the extension is what makes the character themselves. Leave null for the default brain.")]
+    [SerializeField] private CompanionBrainExtension extension;
 
     [Header("References")]
     [Tooltip("Found by tag at Start if left empty.")]
@@ -242,6 +252,23 @@ public class CompanionCombatBrain : MonoBehaviour
         if (HealthFraction <= profile.selfPreserveEnter) return BrainState.SelfPreserve;
         if (state == BrainState.SelfPreserve && HealthFraction < profile.selfPreserveExit)
             return BrainState.SelfPreserve;
+
+        // 1.5. CHARACTER EXTENSION — sits between the safety net (SelfPreserve
+        // must always win, a dead healer helps no one) and the vanilla decision
+        // stack (Intercept/Attack/Anchor). When the extension has an opinion it
+        // wins outright: the profile is the FOUNDATION of the role, the
+        // extension is what makes the character themselves, and the character
+        // gets the final say — otherwise it'd just be advisory.
+        if (extension != null)
+        {
+            BrainContext ctx = new BrainContext(this, transform, player, profile, sensor,
+                                                HealthFraction, combatLatched, state);
+            if (extension.TryEvaluate(in ctx, out BrainState extState, out Transform extTarget))
+            {
+                if (extState == BrainState.Attack && extTarget != null) attackTarget = extTarget;
+                return extState;
+            }
+        }
 
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 

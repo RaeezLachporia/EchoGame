@@ -91,8 +91,9 @@ public class NalediHealing : CompanionAbility
     {
         if (cooldownRemaining > 0f) cooldownRemaining -= Time.deltaTime;
 
-        // An attack order from the player beats healing — drop everything.
-        if (command != null && command.HasActiveCommand)
+        // A PLAYER-issued attack beats healing — but a brain-issued one must
+        // not, or a healer's cast dies the moment the brain gets aggressive.
+        if (command != null && command.HasPlayerCommand)
         {
             // Clear a queued heal trigger too, so the heal animation doesn't
             // sneak out later while she's off attacking.

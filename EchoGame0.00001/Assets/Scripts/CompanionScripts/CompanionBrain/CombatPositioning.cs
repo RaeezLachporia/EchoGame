@@ -18,7 +18,12 @@ public static class CombatPositioning
         if (Mathf.Abs(profile.anchorFanAngle) > 0.01f && profile.anchorFanSign != 0)
             direction = Quaternion.Euler(0f, profile.anchorFanAngle * profile.anchorFanSign, 0f) * direction;
 
-        return playerPosition + direction * profile.anchorDistance;
+        // A negative bias flips the anchor to the OPPOSITE side of the player from
+        // the fight — supports hide behind cover. Scaling (not just sign-flipping)
+        // means intermediate values like 0.5 give a "wing" position between line
+        // and rear, which reads as a Controller mid-liner rather than a full tank.
+        Vector3 anchorOffset = direction * (profile.anchorDistance * profile.anchorForwardBias);
+        return playerPosition + anchorOffset;
     }
 
     // Stand on the line between an enemy and whoever it's about to hit, on the

@@ -157,6 +157,13 @@ public class Comapnion : MonoBehaviour, IDamageable, IHealable
 
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
+
+    // Placeholder until the downed-but-revivable state is built. Companions
+    // currently Destroy() at 0 HP, so a downed companion doesn't exist yet — the
+    // brain reads this so party-emergency triggers can be wired without waiting.
+    // When the real state lands, TakeDamage sets a flag instead of destroying and
+    // this returns it; nothing that reads IsDown has to change.
+    public virtual bool IsDown => false;
     // The name shown on the HUD bar and the floating panel. Reads the definition's
     // name once one is applied, and the inspector fallback until then.
     public string DisplayName => displayName;

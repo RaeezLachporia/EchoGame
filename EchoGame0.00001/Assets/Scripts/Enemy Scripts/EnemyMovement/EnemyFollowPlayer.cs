@@ -80,6 +80,15 @@ public class EnemyFollowPlayer : MonoBehaviour
     // CurrentTarget, so the redirect is total once they're already engaged.
     private Transform tauntTarget;
     private float tauntExpiresAt;
+    // The Focus system — general framework for "this enemy has been marked to
+    // hunt a specific ally". Callers: enemy AI types that pick priority victims
+    // (a hunter that seeks the healer), story scripts that designate a target
+    // for a scripted moment, abilities beyond taunt. Kept separate from taunt on
+    // purpose: taunt is a player-owned override and outranks focus, focus is
+    // AI/script-owned and outranks the passive combat peel.
+    // A zero expiresAt means "never expires" — the permanent-until-cleared mode.
+    private Transform focusTarget;
+    private float focusExpiresAt;
     // Set only by RetargetTick, and only while in Combat. null means "the player",
     // which is both the default and the thing we fall back to whenever the chosen
     // companion dies, disappears, or walks off — see CurrentTarget.
@@ -137,15 +146,26 @@ public class EnemyFollowPlayer : MonoBehaviour
                           && Time.time < tauntExpiresAt
                           && tauntTarget.gameObject.activeInHierarchy;
 
+    // True while a focus target is live. A zero expiresAt = permanent-until-cleared
+    // (story scripts); a positive one = timed (AI behaviours), matching taunt.
+    public bool HasFocus => focusTarget != null
+                         && (focusExpiresAt <= 0f || Time.time < focusExpiresAt)
+                         && focusTarget.gameObject.activeInHierarchy;
+
+    public Transform FocusTarget => HasFocus ? focusTarget : null;
+
     // Who this enemy is actually hunting. Everything past the initial Patrol
-    // sighting reads this rather than `player`, so a taunt redirects the chase,
-    // the facing, and the attack all at once.
+    // sighting reads this rather than `player`, so a taunt / focus / peel redirect
+    // the chase, the facing, and the attack all at once.
     //
-    // Order matters: a taunt is a hard override and outranks the proximity pick.
-    // The combatTarget null-check is also the death handler — Comapnion destroys
-    // its GameObject on death, and Unity's fake-null makes that read as null here,
-    // so a killed companion silently hands us back to the player.
+    // Priority: Taunt > Focus > combat-peel > player.
+    //   Taunt is player-owned and outranks everything else.
+    //   Focus is AI/script-owned and outranks the passive proximity peel.
+    //   combatTarget's null-check doubles as the death handler — Comapnion
+    //   destroys its GameObject on death, and Unity's fake-null reads as null
+    //   here, so a killed companion silently hands us back to the player.
     public Transform CurrentTarget => IsTaunted ? tauntTarget
+                                    : HasFocus ? focusTarget
                                     : (combatTarget != null ? combatTarget : player);
 
     // Layla's taunt. Refuses enemies that haven't noticed anyone yet: pulling a
@@ -163,6 +183,30 @@ public class EnemyFollowPlayer : MonoBehaviour
         PlayerInSight = true;
         SetState(EnemyState.Combat);
         return true;
+    }
+
+    // Point this enemy at a specific victim until ClearFocusTarget is called.
+    // Meant for story scripts and permanent AI designations. Callers wanting a
+    // timed focus use the duration overload; the two write the same fields so a
+    // timed focus can be extended into permanence with SetFocusTarget(victim).
+    public void SetFocusTarget(Transform victim)
+    {
+        focusTarget = victim;
+        focusExpiresAt = 0f;
+    }
+
+    // Timed variant. Auto-clears via HasFocus once the window passes — same
+    // pattern as tauntExpiresAt, and callers don't need to schedule a cleanup.
+    public void SetFocusTarget(Transform victim, float duration)
+    {
+        focusTarget = victim;
+        focusExpiresAt = duration > 0f ? Time.time + duration : 0f;
+    }
+
+    public void ClearFocusTarget()
+    {
+        focusTarget = null;
+        focusExpiresAt = 0f;
     }
 
     // EnemyVisionCone reads these to build and drive the ground-fan visual.
@@ -218,6 +262,8 @@ public class EnemyFollowPlayer : MonoBehaviour
         // fixated on the companion it was fighting when it died.
         tauntTarget = null;
         tauntExpiresAt = 0f;
+        focusTarget = null;
+        focusExpiresAt = 0f;
         combatTarget = null;
         nextRetargetAt = 0f;
     }

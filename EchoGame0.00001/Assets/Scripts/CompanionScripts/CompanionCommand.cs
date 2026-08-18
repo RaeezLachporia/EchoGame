@@ -136,6 +136,15 @@ public class CompanionCommand : MonoBehaviour
     public void CancelCommand()
     {
         targetEnemy = null;
+        // Preempt an in-flight swing. Without this, IsAttacking stays true after
+        // a cancel and the Update block freezes the agent (ResetPath every frame)
+        // until EndAttack fires or maxAttackDuration times out — up to 1.5s of
+        // dead time where whatever preempted us (a player ability, self-preserve,
+        // a jump) can't steer. Safe for internal callers too: OnSwingFinished
+        // arrives with IsAttacking already false; the target-inactive path calls
+        // this before any StartAttack, so there's nothing to interrupt there.
+        IsAttacking = false;
+        attackElapsed = 0f;
         // Triggers stay switched on until a transition uses them. If one is still
         // queued up when the command ends, the animator plays one more swing while
         // the companion is already walking back to the player — clear it here.

@@ -29,6 +29,7 @@ MonoBehaviour:
   anchorDistance: 3
   anchorFanAngle: 0
   anchorFanSign: 0
+  anchorForwardBias: -0.4
   moveSpeed: 4.5
   moveAnimSpeed: 6
   rotationSpeed: 10

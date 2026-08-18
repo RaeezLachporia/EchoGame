@@ -1005,6 +1005,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
       insertIndex: -1
       addedObject: {fileID: 546519705}
+    - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 546519717}
+    - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 546519716}
   m_SourcePrefab: {fileID: 100100000, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
 --- !u!1 &546519683 stripped
 GameObject:
@@ -1066,6 +1072,47 @@ MonoBehaviour:
   shootTrigger: Shoot
   animator: {fileID: 0}
   logShots: 1
+--- !u!95 &546519710 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 679693939616881183, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+  m_PrefabInstance: {fileID: 540039019}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &546519716
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 546519683}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cdf779e1e6cd26498202b0b98af4d3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionCombatBrain
+  profileOverride: {fileID: 11400000, guid: 94a22a585ef739a4cb532260571f4073, type: 2}
+  extension: {fileID: 0}
+  player: {fileID: 1053582027}
+  animator: {fileID: 546519710}
+  animationDampTime: 0.1
+  stateDisplay: 0
+  logStateChanges: 0
+--- !u!114 &546519717
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 546519683}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cc40b0ac42cb944ab1174a999100a00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionThreatSensor
+  enemyMask:
+    serializedVersion: 2
+    m_Bits: 128
+  drawGizmos: 1
+  logTargeting: 0
 --- !u!1 &608369977
 GameObject:
   m_ObjectHideFlags: 0
@@ -1654,6 +1701,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CompanionCombatBrain
   profileOverride: {fileID: 11400000, guid: 6d779703e05a90941a9472f7276bb862, type: 2}
+  extension: {fileID: 0}
   player: {fileID: 1053582027}
   animator: {fileID: 764257490}
   animationDampTime: 0.1
@@ -3069,7 +3117,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 239.3, y: -112}
+  m_AnchoredPosition: {x: 205.4, y: -112}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1196523044
@@ -3158,7 +3206,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 0, z: -96.54016, w: -79.50969}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -4383,11 +4431,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5846980992440594692, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
       propertyPath: maxHealth
-      value: 100
+      value: 250
       objectReference: {fileID: 0}
     - target: {fileID: 5846980992440594692, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
       propertyPath: currentHealth
-      value: 100
+      value: 250
       objectReference: {fileID: 0}
     - target: {fileID: 8316288702793715424, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
       propertyPath: player
@@ -4409,6 +4457,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4674214349053217189, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6115972589266347423}
+    - targetCorrespondingSourceObject: {fileID: 4674214349053217189, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6115972589266347435}
+    - targetCorrespondingSourceObject: {fileID: 4674214349053217189, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6115972589266347434}
   m_SourcePrefab: {fileID: 100100000, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
 --- !u!114 &3982568046616990391 stripped
 MonoBehaviour:
@@ -4650,6 +4704,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8711830233340729599}
+    - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8711830233340729607}
+    - targetCorrespondingSourceObject: {fileID: 6567921122869032960, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8711830233340729606}
   m_SourcePrefab: {fileID: 100100000, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
 --- !u!4 &6115972589266347390 stripped
 Transform:
@@ -4712,6 +4772,47 @@ MonoBehaviour:
   buffTrigger: Buff
   animator: {fileID: 0}
   logBuff: 1
+--- !u!95 &6115972589266347425 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 6510053906592014244, guid: 72bbf2b88d3802c41bf5017c6a62c2bc, type: 3}
+  m_PrefabInstance: {fileID: 2310611652650892960}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6115972589266347434
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1924117047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cdf779e1e6cd26498202b0b98af4d3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionCombatBrain
+  profileOverride: {fileID: 11400000, guid: a2eb427636530f744997fec757353004, type: 2}
+  extension: {fileID: 0}
+  player: {fileID: 1053582027}
+  animator: {fileID: 6115972589266347425}
+  animationDampTime: 0.1
+  stateDisplay: 0
+  logStateChanges: 0
+--- !u!114 &6115972589266347435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1924117047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cc40b0ac42cb944ab1174a999100a00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionThreatSensor
+  enemyMask:
+    serializedVersion: 2
+    m_Bits: 128
+  drawGizmos: 1
+  logTargeting: 0
 --- !u!4 &7556574663755820120 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 87117431835768757, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
@@ -5006,6 +5107,42 @@ Animator:
   m_CorrespondingSourceObject: {fileID: 679693939616881183, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
   m_PrefabInstance: {fileID: 5735871795900416429}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &8711830233340729606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8711830233340729598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cdf779e1e6cd26498202b0b98af4d3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionCombatBrain
+  profileOverride: {fileID: 11400000, guid: 34fce4aaf59551a48a74d5fa3387a8cb, type: 2}
+  extension: {fileID: 11400000, guid: 5f19d738a06b4c2eb9e074cd21f38a45, type: 2}
+  player: {fileID: 1053582027}
+  animator: {fileID: 8711830233340729605}
+  animationDampTime: 0.1
+  stateDisplay: 0
+  logStateChanges: 1
+--- !u!114 &8711830233340729607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8711830233340729598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cc40b0ac42cb944ab1174a999100a00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompanionThreatSensor
+  enemyMask:
+    serializedVersion: 2
+    m_Bits: 0
+  drawGizmos: 1
+  logTargeting: 0
 --- !u!1001 &8829958467991433826
 PrefabInstance:
   m_ObjectHideFlags: 0

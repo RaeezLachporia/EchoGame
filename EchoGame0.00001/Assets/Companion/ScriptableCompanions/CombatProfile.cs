@@ -63,6 +63,8 @@ public class CombatProfile : ScriptableObject
     public float anchorFanAngle = 0f;
     [Tooltip("-1, 0 or +1. Which way anchorFanAngle leans for this companion.")]
     [Range(-1, 1)] public int anchorFanSign = 0;
+    [Tooltip("Where relative to the player she anchors. +1 = fully in front toward the fight (tanks — the default). 0 = beside the player. -1 = fully behind, using the player as cover (backline supports). Universal knob because every role positions SOMEWHERE relative to the party — the pacifism/self-defense triggers that would suit a specific character go on that character's brain extension, not here.")]
+    [Range(-1f, 1f)] public float anchorForwardBias = 1f;
     [Tooltip("Move speed while repositioning under her own steam (anchoring, intercepting, backing off). Charging an enemy uses CompanionCommand's chase speed instead.")]
     public float moveSpeed = 4.5f;
     [Tooltip("Authored speed of the run animation, so footsteps stay synced while she repositions.")]

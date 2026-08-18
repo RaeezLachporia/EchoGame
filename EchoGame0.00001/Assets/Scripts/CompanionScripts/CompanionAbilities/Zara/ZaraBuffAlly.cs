@@ -75,10 +75,11 @@ public class ZaraBuffAlly : CompanionAbility
         if (cooldownRemaining > 0f) cooldownRemaining -= Time.deltaTime;
         if (castTarget == null) return;
 
-        // An attack order from the player beats a buff — drop the cast.
-        if (command != null && command.HasActiveCommand)
+        // A PLAYER-issued attack beats a buff — but a brain-issued one must
+        // not, or the cast self-cancels the moment the brain has a target.
+        if (command != null && command.HasPlayerCommand)
         {
-            CancelCast("an attack order came in");
+            CancelCast("a player attack order came in");
             return;
         }
 
