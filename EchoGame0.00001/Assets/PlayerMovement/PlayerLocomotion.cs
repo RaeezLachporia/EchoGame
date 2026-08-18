@@ -1,8 +1,10 @@
 using System;
+using UnityEngine.Audio;
 using UnityEngine;
 
 public class PlayerLocomotion : MonoBehaviour
 {
+    private AudioSource audioSource;  
    InputManager inputManager;
    AnimatorManager animatorManager;
    PlayerBasicCombat playerCombat;
@@ -52,7 +54,7 @@ public class PlayerLocomotion : MonoBehaviour
    // rollFallBreakHeight). Set when a roll starts, cleared on landing / when the
    // roll becomes a real fall.
    private bool rolling;
-   private float hardLandTimer;
+    private float hardLandTimer; 
 
    private void Awake()
    {
