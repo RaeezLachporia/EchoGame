@@ -7,6 +7,8 @@ public class InputManager : MonoBehaviour
    private PlayerControls playerControls;
    AnimatorManager animatorManager;
    PlayerLocomotion playerLocomotion;
+   [Tooltip("Wheel that owns the ally/enemy picker states. When one is open, A is a 'commit target' press and must not also jump. Auto-found if empty.")]
+   [SerializeField] private CommandWheel commandWheel;
    
    public Vector2 movementInput;
    public Vector2 cameraInput;
@@ -29,6 +31,7 @@ public class InputManager : MonoBehaviour
    {
       animatorManager = GetComponent<AnimatorManager>();
       playerLocomotion = GetComponent<PlayerLocomotion>();
+      if (commandWheel == null) commandWheel = FindObjectOfType<CommandWheel>();
    }
    private void OnEnable()
    {
@@ -49,7 +52,15 @@ public class InputManager : MonoBehaviour
          playerControls.PlayerMovement.Sprint.canceled  += i => isSprinting = false;
          // Only accept jump/dodge presses when grounded — otherwise a press in
          // the air would buffer until the next FixedUpdate and fire on landing.
-         playerControls.PlayerMovement.Jump.performed   += i => { if (playerLocomotion.isGrounded) jumpInput = true; };
+         // Jump shares its gamepad button (A) with the wheel's confirm; swallow
+         // the press while a picker is open (or if confirm already handled this
+         // same press earlier in the frame — SuppressJumpThisPress is sticky
+         // across the whole event to sidestep callback-order races).
+         playerControls.PlayerMovement.Jump.performed   += i =>
+         {
+            if (commandWheel != null && commandWheel.SuppressJumpThisPress) return;
+            if (playerLocomotion.isGrounded) jumpInput = true;
+         };
          playerControls.PlayerMovement.Dodge.performed  += i => { if (playerLocomotion.isGrounded) dodgeInput = true; };
          playerControls.PlayerMovement.Attack.performed  += i => attackInput = true;
       }

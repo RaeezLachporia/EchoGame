@@ -5,6 +5,10 @@ public enum StatusEffectKind
 {
     Buff,
     Debuff,
+    // Knocked back and helpless. Its own kind rather than a Debuff because it
+    // doesn't change incoming damage — and because an enemy can carry a stagger
+    // and a damage debuff at once, each with its own icon.
+    Stagger,
 }
 
 // A temporary buff or debuff running on a character.

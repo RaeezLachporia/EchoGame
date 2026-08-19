@@ -1,39 +1,88 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// Status-effect icons on an enemy's floating panel.
+// Status-effect icon on an enemy's floating panel.
 //
-// This lives on the enemy PREFAB so the Image references can be wired in the
-// inspector. EnemyDebuff can't hold them itself: it's added at runtime by the
-// ability that applies it, so any serialized field on it would always be empty.
-// The runtime effect asks this component to show/hide instead.
+// One shared Image renderer, two sprite slots — the code picks which sprite to
+// show based on what's active. Matches how CompanionUI drives the ally-side
+// status icon, so the two sides read the same way in the inspector.
 //
-// Add more slots here as further buffs/debuffs arrive (stun, burn, shield...).
+// This lives on the enemy PREFAB so the wiring can be done in the inspector.
+// EnemyDebuff and EnemyStagger can't hold these references themselves: they're
+// added at runtime by the abilities that apply them, so any serialized field on
+// them would always be empty. The runtime effects call SetDebuffVisible /
+// SetStaggerVisible instead.
+//
+// Both effects can run on the same enemy at once (Zara's debuff + Layla's shove).
+// Only one icon shows at a time and STAGGER wins the tie — "helpless" is the more
+// urgent thing for the player to see than "damage amplified". The debuff icon
+// pops back the moment the stagger expires.
 public class EnemyStatusIcons : MonoBehaviour
 {
-    [Header("Icons")]
-    [Tooltip("Drag the StatusEffect GAMEOBJECT from the enemy panel in the Hierarchy — NOT the sprite asset from the Project window. The sprite stays in that object's own Source Image; this slot just needs the Image so the code can switch it on and off. Hidden until a damage debuff is applied.")]
-    [SerializeField] private Image debuffIcon;
+    [Header("Renderer")]
+    [Tooltip("The single Image on the enemy panel that shows the active status. Drag the GAMEOBJECT (the Image) from the enemy panel in the Hierarchy. Its Source Image is overwritten by the sprites below whenever an effect turns on.")]
+    [SerializeField] private Image statusIcon;
+
+    [Header("Sprites")]
+    [Tooltip("Shown while a damage-amp debuff (Zara) is running. Drag the sprite asset from the Project window.")]
+    [SerializeField] private Sprite debuffSprite;
+    [Tooltip("Shown while a shove stagger (Layla) is running. Outranks the debuff sprite when both are active, since helpless is the more urgent thing to signal.")]
+    [SerializeField] private Sprite staggerSprite;
+
+    private bool debuffActive;
+    private bool staggerActive;
 
     void Awake()
     {
         // Start hidden no matter how the prefab was left in the editor, so an enemy
         // never shows a status it doesn't actually have.
-        SetDebuffVisible(false);
+        debuffActive = false;
+        staggerActive = false;
+        Refresh();
     }
 
     // Enemies are pooled — a reused one must not come back wearing the icon from
     // its previous life.
     void OnEnable()
     {
-        SetDebuffVisible(false);
+        debuffActive = false;
+        staggerActive = false;
+        Refresh();
     }
 
-    // Toggles the Image's renderer rather than the GameObject, so the panel's
-    // layout doesn't reflow when the icon comes and goes.
+    // Driven by EnemyDebuff while a damage-amp is running.
     public void SetDebuffVisible(bool visible)
     {
-        if (debuffIcon == null) return;
-        debuffIcon.enabled = visible;
+        debuffActive = visible;
+        Refresh();
+    }
+
+    // Driven by EnemyStagger while a shove's knockback and helpless window run.
+    public void SetStaggerVisible(bool visible)
+    {
+        staggerActive = visible;
+        Refresh();
+    }
+
+    // Pick the highest-priority active sprite and show it. Toggles the Image's
+    // renderer rather than the GameObject so the panel's layout doesn't reflow
+    // when the icon comes and goes.
+    private void Refresh()
+    {
+        if (statusIcon == null) return;
+
+        Sprite next = null;
+        if (staggerActive && staggerSprite != null) next = staggerSprite;
+        else if (debuffActive && debuffSprite != null) next = debuffSprite;
+
+        if (next != null)
+        {
+            statusIcon.sprite = next;
+            statusIcon.enabled = true;
+        }
+        else
+        {
+            statusIcon.enabled = false;
+        }
     }
 }

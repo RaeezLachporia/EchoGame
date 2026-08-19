@@ -40,6 +40,10 @@ public class EnemyPatrolling : MonoBehaviour
         // Alert (and later Combat) own the agent. Same yield pattern as
         // ComapnionBehaviour yielding to CompanionCommand.HasActiveCommand.
         if (follow != null && follow.State != EnemyFollowPlayer.EnemyState.Patrol) return;
+        // Shoved mid-patrol. EnemyStagger holds the agent stopped so they wouldn't
+        // actually move, but without this they'd still queue up a wander point and
+        // stroll off to it the instant the stagger lifted.
+        if (follow != null && follow.IsStaggered) return;
         if (!agent.isOnNavMesh) return;
 
         // EnemyFollowPlayer sets a non-zero stoppingDistance for chase — the agent

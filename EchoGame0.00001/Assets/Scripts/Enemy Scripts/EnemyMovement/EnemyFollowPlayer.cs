@@ -146,6 +146,19 @@ public class EnemyFollowPlayer : MonoBehaviour
                           && Time.time < tauntExpiresAt
                           && tauntTarget.gameObject.activeInHierarchy;
 
+    // True while a shove has this enemy knocked back or helpless. Fetched rather
+    // than cached: EnemyStagger is added at runtime by LaylaShove and destroys
+    // itself on expiry, so any cached reference would be stale in both directions.
+    // Same per-call GetComponent EnemyHealth does for EnemyDebuff.
+    public bool IsStaggered
+    {
+        get
+        {
+            EnemyStagger stagger = GetComponent<EnemyStagger>();
+            return stagger != null && stagger.IsStaggered;
+        }
+    }
+
     // True while a focus target is live. A zero expiresAt = permanent-until-cleared
     // (story scripts); a positive one = timed (AI behaviours), matching taunt.
     public bool HasFocus => focusTarget != null
@@ -276,6 +289,17 @@ public class EnemyFollowPlayer : MonoBehaviour
     void Update()
     {
         if (player == null) AcquirePlayer();
+
+        // Shoved: no chasing, no turning, no thinking. Checked before the NavMesh
+        // guard below because EnemyStagger disables the agent outright for the
+        // knockback slide, which would otherwise read as "failed to spawn".
+        // EnemyCombat has the matching gate — stopping movement alone would leave
+        // a staggered enemy rooted in place but still swinging at whoever's close.
+        if (IsStaggered)
+        {
+            if (animator != null) animator.SetFloat(SpeedHash, 0f);
+            return;
+        }
 
         // If the agent failed to spawn on the NavMesh, do nothing — SetDestination
         // would just log warnings and the animation would jitter on garbage velocity.

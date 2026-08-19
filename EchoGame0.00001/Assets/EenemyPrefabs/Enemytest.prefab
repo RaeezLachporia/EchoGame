@@ -864,7 +864,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc9780c6a4bc8ca49be2b842153b4e58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyStatusIcons
-  debuffIcon: {fileID: 6321237560858129990}
+  statusIcon: {fileID: 6321237560858129990}
+  debuffSprite: {fileID: 21300000, guid: fe4681fda527dcb419b9a9aa98be31ec, type: 3}
+  staggerSprite: {fileID: 21300000, guid: ebe3fa5dddf87c341aaa6b0138b59c8e, type: 3}
 --- !u!1 &7001077129245509042
 GameObject:
   m_ObjectHideFlags: 0

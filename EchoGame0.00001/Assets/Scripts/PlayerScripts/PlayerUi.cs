@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class PlayerUi : MonoBehaviour
 {
@@ -10,6 +11,8 @@ public class PlayerUi : MonoBehaviour
     [Header("UI")]
     [SerializeField] private HealthBarUi healthBar;
     [SerializeField] private Slider healthSlider;
+    [Tooltip("Optional TMP text under the health bar. Shows 'current / max'. Leave empty to hide the label.")]
+    [SerializeField] private TMP_Text healthLabel;
 
     void Start()
     {
@@ -23,6 +26,8 @@ public class PlayerUi : MonoBehaviour
             healthSlider.value = currentHealth;
             healthSlider.interactable = false;
         }
+
+        RefreshHealthLabel();
     }
 
     public float CurrentHealth => currentHealth;
@@ -44,6 +49,7 @@ public class PlayerUi : MonoBehaviour
         currentHealth = Mathf.Clamp(value, 0f, maxHealth);
         if (healthBar != null) healthBar.SetHealth(currentHealth);
         if (healthSlider != null) healthSlider.value = currentHealth;
+        RefreshHealthLabel();
     }
 
     public void SetMaxHealth(float value, bool refill = true)
@@ -56,5 +62,12 @@ public class PlayerUi : MonoBehaviour
             healthSlider.maxValue = maxHealth;
             healthSlider.value = currentHealth;
         }
+        RefreshHealthLabel();
+    }
+
+    private void RefreshHealthLabel()
+    {
+        if (healthLabel == null) return;
+        healthLabel.text = Mathf.CeilToInt(currentHealth) + " / " + Mathf.CeilToInt(maxHealth);
     }
 }

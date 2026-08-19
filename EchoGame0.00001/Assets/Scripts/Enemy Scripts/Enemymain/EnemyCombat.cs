@@ -67,6 +67,18 @@ public class EnemyCombat : MonoBehaviour
 
         if (cooldownRemaining > 0f) return;
 
+        // Shoved: helpless means helpless. EnemyFollowPlayer stops the chase, this
+        // stops the swing — without both, a staggered enemy stands rooted in place
+        // still hitting anyone who walks into range, which reads as the stagger
+        // doing nothing.
+        //
+        // Sits BELOW the isAttacking block on purpose: a swing already in flight
+        // keeps ticking its timeout so it can clear itself. Gating above this would
+        // freeze isAttacking true for the whole stagger, and EnemyFollowPlayer
+        // refuses to path while that flag is set — the enemy would stay stuck long
+        // after the stagger wore off.
+        if (brain != null && brain.IsStaggered) return;
+
         // Attacks belong to the Combat state. Alert stalks without swinging and
         // Patrol obviously doesn't fight — the brain escalates Alert -> Combat after
         // the player stays in sight for its timeToEngage, and only then do we swing.

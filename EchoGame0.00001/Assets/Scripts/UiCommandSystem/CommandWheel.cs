@@ -134,10 +134,11 @@ public class CommandWheel : MonoBehaviour
         // on the ally wheel it heals the PLAYER (who isn't a wheel slice), on the
         // enemy cycle it CONFIRMS the highlighted enemy. The states are mutually
         // exclusive and the message line says which, so they can share a button.
-        // buttonNorth (Y) and 'H' are free: Jump = A, Dodge = B, Attack = RB/LMB,
-        // so this never double-fires while aiming.
+        // Gamepad = buttonSouth (A): InputManager suppresses Jump while a picker
+        // is open (IsPickingTarget), so A means "commit" during the pick and
+        // "jump" everywhere else. Keyboard stays on 'H' so space always jumps.
         confirmAction = new InputAction("WheelConfirm", InputActionType.Button);
-        confirmAction.AddBinding("<Gamepad>/buttonNorth");
+        confirmAction.AddBinding("<Gamepad>/buttonSouth");
         confirmAction.AddBinding("<Keyboard>/h");
 
         if (aim == null) aim = FindObjectOfType<PlayerAimZoom>();
@@ -330,8 +331,24 @@ public class CommandWheel : MonoBehaviour
         RecordInputDevice(ctx);
         if (!IsWheelEngaged()) return;
 
-        if (state == WheelState.AllyWheel) DispatchPlayerHeal();
-        else if (state == WheelState.EnemyCycle) ConfirmEnemyTarget();
+        if (state == WheelState.AllyWheel)
+        {
+            suppressJumpThisPress = true;
+            DispatchPlayerHeal();
+        }
+        else if (state == WheelState.EnemyCycle)
+        {
+            suppressJumpThisPress = true;
+            ConfirmEnemyTarget();
+        }
+    }
+
+    // Clear the sticky jump-suppress AFTER Update, so a Jump.performed callback
+    // firing later in the same frame still sees it. Input callbacks resolve
+    // before Update, so a fresh press next frame starts clean.
+    void LateUpdate()
+    {
+        suppressJumpThisPress = false;
     }
 
     // Track which control scheme drove the last wheel input, so the heal-player
@@ -358,9 +375,9 @@ public class CommandWheel : MonoBehaviour
         wheelMessageLabel.gameObject.SetActive(false);
     }
 
-    // The dedicated player button, glyph chosen by the last input used (Y on gamepad,
+    // The dedicated player button, glyph chosen by the last input used (A on gamepad,
     // H on keyboard) — matches the confirmAction bindings.
-    private string PlayerButtonLabel => lastInputWasGamepad ? "Y" : "H";
+    private string PlayerButtonLabel => lastInputWasGamepad ? "A" : "H";
 
     // "Press Y to heal player" / "...to buff player" — the verb comes from the active
     // ability's name, so the same line serves heal and, later, buff with no rewiring.
@@ -385,6 +402,21 @@ public class CommandWheel : MonoBehaviour
         bool locked = lockOn != null && lockOn.IsLocked;
         return aiming || locked;
     }
+
+    // Read by InputManager to suppress Jump while an ally/enemy picker is open —
+    // gamepad A doubles as the confirm button, and this is what tells jump to
+    // stand down for that press. Only the two picker states qualify; the main
+    // wheel and idle keep jumping normal.
+    public bool IsPickingTarget => state == WheelState.AllyWheel || state == WheelState.EnemyCycle;
+
+    // Sticky for one frame after OnConfirm handles an A press. Jump.performed and
+    // confirmAction.performed fire on the same buttonSouth event with no ordering
+    // guarantee between them; if confirm runs first it drops state to Idle and
+    // the naive IsPickingTarget check would already read false when jump runs
+    // next. This latch keeps SuppressJumpThisPress true across the whole press
+    // regardless of callback order, then LateUpdate clears it for the next frame.
+    private bool suppressJumpThisPress;
+    public bool SuppressJumpThisPress => IsPickingTarget || suppressJumpThisPress;
 
     private void SelectCompanion(int slot)
     {

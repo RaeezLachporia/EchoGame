@@ -332,8 +332,11 @@ public class CompanionUI : MonoBehaviour
         for (int i = 0; i < effects.Length; i++)
         {
             if (effects[i] == null || !effects[i].IsActive) continue;
-            // A debuff wins outright — trouble is the more urgent thing to show.
-            if (effects[i].Kind == StatusEffectKind.Debuff) return effects[i];
+            // Anything that isn't a buff wins outright — trouble is the more urgent
+            // thing to show. Tested as "not a Buff" rather than "is a Debuff" so
+            // kinds added later (Stagger, and whatever follows) count as trouble by
+            // default instead of silently falling through to the buff icon.
+            if (effects[i].Kind != StatusEffectKind.Buff) return effects[i];
             if (best == null) best = effects[i];
         }
         return best;
@@ -351,7 +354,7 @@ public class CompanionUI : MonoBehaviour
             return;
         }
 
-        Sprite sprite = effect.Kind == StatusEffectKind.Debuff ? debuffIcon : buffIcon;
+        Sprite sprite = effect.Kind == StatusEffectKind.Buff ? buffIcon : debuffIcon;
         // No art assigned for that kind → stay hidden rather than show whatever
         // sprite happened to be left on the Image in the editor.
         if (sprite != null) statusIcon.sprite = sprite;
