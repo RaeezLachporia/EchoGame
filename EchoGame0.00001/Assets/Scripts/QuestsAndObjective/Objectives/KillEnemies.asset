@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3890e78cde3d74948ac686c801657aa5, type: 3}
   m_Name: KillEnemies
   m_EditorClassIdentifier: Assembly-CSharp::ObjectiveDefinition
-  id: 
-  title: 
-  description: 
+  id: Kill-Enemies
+  title: Kill enemies
+  description: 'Warm up and kill some enemies '
   kind: 0
-  targetGroup: 
-  requiredCount: 1
+  targetGroup: Echoes
+  requiredCount: 5
   optional: 0

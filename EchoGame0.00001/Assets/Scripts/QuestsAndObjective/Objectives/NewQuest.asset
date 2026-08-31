@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc4b92c4329c52c4f955fe56a7658440, type: 3}
   m_Name: NewQuest
   m_EditorClassIdentifier: Assembly-CSharp::QuestDefinition
-  id: 
-  title: 
-  description: 
-  objectives: []
+  id: Warming-Up
+  title: warming up
+  description: get familiar with killing enemies
+  objectives:
+  - {fileID: 11400000, guid: 067d3012dd22404458c800be7c3f24ca, type: 2}
   flow: 0
-  startOnLoad: 0
+  startOnLoad: 1
   nextQuest: {fileID: 0}
