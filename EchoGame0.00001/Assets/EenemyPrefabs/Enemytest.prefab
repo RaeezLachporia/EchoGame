@@ -554,6 +554,7 @@ GameObject:
   - component: {fileID: 9159337811813846432}
   - component: {fileID: -1143872501896204309}
   - component: {fileID: 4562317281621340916}
+  - component: {fileID: -5356300145097093138}
   m_Layer: 7
   m_Name: Enemytest
   m_TagString: Enemy
@@ -867,6 +868,19 @@ MonoBehaviour:
   statusIcon: {fileID: 6321237560858129990}
   debuffSprite: {fileID: 21300000, guid: fe4681fda527dcb419b9a9aa98be31ec, type: 3}
   staggerSprite: {fileID: 21300000, guid: ebe3fa5dddf87c341aaa6b0138b59c8e, type: 3}
+--- !u!114 &-5356300145097093138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6098347863301187141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38c9f1ec030909646b22b73f2eae50d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjectiveTarget
+  groupId: Echoes
 --- !u!1 &7001077129245509042
 GameObject:
   m_ObjectHideFlags: 0

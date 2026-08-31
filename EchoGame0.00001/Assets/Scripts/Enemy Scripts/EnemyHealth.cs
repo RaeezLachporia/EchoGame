@@ -27,6 +27,16 @@ public class EnemyHealth : MonoBehaviour, IDamageable
     public float MaxHealth => maxHealth;
     public float HealthFraction => maxHealth <= 0f ? 0f : currentHealth / maxHealth;
 
+    // Fired the moment ANY enemy's health hits zero, before it is pooled or
+    // destroyed — so a subscriber can still read its components, transform and
+    // name. Static because the listener is a level-wide thing (QuestTracker
+    // counting kills), not something you would want to wire per enemy. Same
+    // reasoning as Comapnion.Active.
+    //
+    // Subscribe in OnEnable and unsubscribe in OnDisable — a subscriber that
+    // never detaches keeps receiving kills from scenes it no longer belongs to.
+    public static event System.Action<EnemyHealth> AnyDied;
+
     void Awake()
     {
         follow = GetComponent<EnemyFollowPlayer>();
@@ -79,6 +89,12 @@ public class EnemyHealth : MonoBehaviour, IDamageable
         if (currentHealth <= 0f)
         {
             isDead = true;
+
+            // Announce BEFORE pooling or destroying: ReturnToPool deactivates the
+            // object and Destroy makes it fake-null, so anything a subscriber
+            // tried to read after this point would come back empty.
+            AnyDied?.Invoke(this);
+
             // ReturnToPool owns the pool-vs-destroy decision. Only fall back here if
             // this is on something that isn't a follow-enemy at all.
             if (follow != null) follow.ReturnToPool();
