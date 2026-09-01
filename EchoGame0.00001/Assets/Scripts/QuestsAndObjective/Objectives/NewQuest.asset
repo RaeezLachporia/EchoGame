@@ -18,5 +18,5 @@ MonoBehaviour:
   objectives:
   - {fileID: 11400000, guid: 067d3012dd22404458c800be7c3f24ca, type: 2}
   flow: 0
-  startOnLoad: 1
+  startOnLoad: 0
   nextQuest: {fileID: 0}

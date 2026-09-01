@@ -15,8 +15,12 @@ public class QuestTracker : MonoBehaviour
     [Header("Quests")]
     [Tooltip("Every quest in the game. Quests ticked Start On Load begin automatically, and this is what StartQuest(id) looks names up in. Drag your QuestDatabase asset here.")]
     [SerializeField] private QuestDatabase database;
-    [Tooltip("Extra quests to start in THIS level only, on top of anything already marked Start On Load. Handy for testing one quest without editing its asset.")]
+    [Tooltip("Extra quests to start in THIS level only, on top of anything already marked Start On Load. Handy for testing one quest without editing its asset. Leave this EMPTY for a quest handed out by a QuestGiver, or it starts before the player reaches the giver.")]
     [SerializeField] private List<QuestDefinition> questsToStart = new List<QuestDefinition>();
+
+    // Read-only so QuestGiver can warn when it's been asked to hand out a quest this
+    // tracker already starts by itself.
+    public IReadOnlyList<QuestDefinition> QuestsToStart => questsToStart;
 
     [Header("Debug")]
     [Tooltip("Log every objective activation, tick and completion. Leave this on while building levels — it's the fastest way to see why an objective isn't counting.")]
@@ -46,6 +50,12 @@ public class QuestTracker : MonoBehaviour
     // What the HUD reads to draw the list. Read-only so nothing can bypass StartQuest
     // by adding to it directly.
     public IReadOnlyList<QuestProgress> Quests => quests;
+
+    // Quests a QuestGiver in this level is going to hand out. These are skipped at
+    // load even if Start On Load is ticked, because a giver existing means the player
+    // is meant to go and get it. Givers claim theirs in Awake, and every Awake runs
+    // before this component's Start, so the list is complete by the time it's read.
+    private readonly HashSet<QuestDefinition> reserved = new HashSet<QuestDefinition>();
 
     // The HUD listens to these instead of checking every frame.
     public event System.Action<QuestProgress> QuestStarted;
@@ -81,15 +91,39 @@ public class QuestTracker : MonoBehaviour
             for (int i = 0; i < database.allQuests.Count; i++)
             {
                 QuestDefinition quest = database.allQuests[i];
-                if (quest != null && quest.startOnLoad) StartQuest(quest);
+                if (quest != null && quest.startOnLoad) StartAtLoad(quest);
             }
         }
 
         for (int i = 0; i < questsToStart.Count; i++)
-            StartQuest(questsToStart[i]);
+            StartAtLoad(questsToStart[i]);
+    }
+
+    // Starts a quest at load unless a QuestGiver has claimed it. A quest that's both
+    // set to start on its own and handed out by a giver used to start at load, which
+    // left the giver with nothing to give and no prompt ever appearing.
+    private void StartAtLoad(QuestDefinition quest)
+    {
+        if (quest == null) return;
+
+        if (reserved.Contains(quest))
+        {
+            if (logProgress)
+                Debug.Log($"[QuestTracker] Not starting \"{quest.title}\" at load — a QuestGiver in this level hands it out. Clear Start On Load and Quests To Start to silence this.", this);
+            return;
+        }
+
+        StartQuest(quest);
     }
 
     // ---------------------------------------------------------------- public API
+
+    // Called by QuestGiver in Awake. Tells the tracker to leave this quest alone at
+    // load so the giver can be the one to hand it over.
+    public void ReserveForGiver(QuestDefinition quest)
+    {
+        if (quest != null) reserved.Add(quest);
+    }
 
     // Starts a quest by its id, looked up in the Database.
     // For cutscenes, triggers, and dialogue choices.
@@ -196,6 +230,10 @@ public class QuestTracker : MonoBehaviour
         TryCompleteQuest(quest);
         return true;
     }
+
+    // True once a quest has been started, whether it's still running or finished.
+    // QuestGiver uses this to stop offering a quest the player already took.
+    public bool HasQuest(QuestDefinition quest) => FindQuest(quest) != null;
 
     public bool IsQuestComplete(string questId)
     {
