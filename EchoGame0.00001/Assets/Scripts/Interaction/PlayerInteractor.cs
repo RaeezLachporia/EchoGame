@@ -21,6 +21,8 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField] private CommandWheel commandWheel;
     [Tooltip("Untick to let the player still interact while the command wheel is open.")]
     [SerializeField] private bool blockedByWheel = true;
+    [Tooltip("The player's ability wheel. Interact shares gamepad X with its LEFT slice, so presses are ignored while the right bumper holds the wheel open. Auto-found if empty.")]
+    [SerializeField] private PlayerAbilityWheel abilityWheel;
     [Tooltip("Aim script. The prompt hides while aiming. Auto-found if empty.")]
     [SerializeField] private PlayerAimZoom aim;
     [Tooltip("Untick to let the player still interact while aiming.")]
@@ -65,6 +67,7 @@ public class PlayerInteractor : MonoBehaviour
 
         if (prompt == null) prompt = FindObjectOfType<InteractionPrompt>();
         if (commandWheel == null) commandWheel = FindObjectOfType<CommandWheel>();
+        if (abilityWheel == null) abilityWheel = FindObjectOfType<PlayerAbilityWheel>();
         if (aim == null) aim = GetComponent<PlayerAimZoom>();
     }
 
@@ -106,10 +109,17 @@ public class PlayerInteractor : MonoBehaviour
 
     private bool Blocked =>
         (blockedByWheel && commandWheel != null && commandWheel.IsPickingTarget)
+        || (blockedByWheel && abilityWheel != null && abilityWheel.IsOpen)
         || (blockedByAiming && aim != null && aim.IsAiming);
 
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
+        // Blocked only clears the target in Update, but input callbacks run BEFORE
+        // Update — so on the frame the wheel opens, 'current' is still last frame's
+        // target and X would interact on its way to becoming a wheel slice. The
+        // prompt-hiding above is cosmetic; this is what actually swallows the press.
+        if (abilityWheel != null && abilityWheel.IsOpen) return;
+
         if (current == null) return;
 
         Interactable target = current;

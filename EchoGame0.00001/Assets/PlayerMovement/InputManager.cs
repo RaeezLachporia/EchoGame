@@ -9,6 +9,8 @@ public class InputManager : MonoBehaviour
    PlayerLocomotion playerLocomotion;
    [Tooltip("Wheel that owns the ally/enemy picker states. When one is open, A is a 'commit target' press and must not also jump. Auto-found if empty.")]
    [SerializeField] private CommandWheel commandWheel;
+   [Tooltip("The player's own ability wheel. While the right bumper holds it open the face buttons are its slices, so A must not jump and B must not dodge. Auto-found if empty.")]
+   [SerializeField] private PlayerAbilityWheel abilityWheel;
    
    public Vector2 movementInput;
    public Vector2 cameraInput;
@@ -32,6 +34,7 @@ public class InputManager : MonoBehaviour
       animatorManager = GetComponent<AnimatorManager>();
       playerLocomotion = GetComponent<PlayerLocomotion>();
       if (commandWheel == null) commandWheel = FindObjectOfType<CommandWheel>();
+      if (abilityWheel == null) abilityWheel = FindObjectOfType<PlayerAbilityWheel>();
    }
    private void OnEnable()
    {
@@ -52,16 +55,25 @@ public class InputManager : MonoBehaviour
          playerControls.PlayerMovement.Sprint.canceled  += i => isSprinting = false;
          // Only accept jump/dodge presses when grounded — otherwise a press in
          // the air would buffer until the next FixedUpdate and fire on landing.
-         // Jump shares its gamepad button (A) with the wheel's confirm; swallow
-         // the press while a picker is open (or if confirm already handled this
-         // same press earlier in the frame — SuppressJumpThisPress is sticky
-         // across the whole event to sidestep callback-order races).
+         //
+         // Both buttons are also wheel slices, so each has to stand down twice over:
+         //  - Jump (A) is the companion wheel's confirm. SuppressJumpThisPress is
+         //    sticky across the whole event to sidestep callback-order races, since
+         //    that confirm mutates the state the check reads.
+         //  - Jump (A) and Dodge (B) are the player wheel's BOTTOM and RIGHT slices.
+         //    IsOpen reads the bumper's live pressed state, so there is no race to
+         //    dodge here — it is already true whichever callback runs first.
          playerControls.PlayerMovement.Jump.performed   += i =>
          {
             if (commandWheel != null && commandWheel.SuppressJumpThisPress) return;
+            if (abilityWheel != null && abilityWheel.IsOpen) return;
             if (playerLocomotion.isGrounded) jumpInput = true;
          };
-         playerControls.PlayerMovement.Dodge.performed  += i => { if (playerLocomotion.isGrounded) dodgeInput = true; };
+         playerControls.PlayerMovement.Dodge.performed  += i =>
+         {
+            if (abilityWheel != null && abilityWheel.IsOpen) return;
+            if (playerLocomotion.isGrounded) dodgeInput = true;
+         };
          playerControls.PlayerMovement.Attack.performed  += i => attackInput = true;
       }
 

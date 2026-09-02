@@ -494,6 +494,9 @@ MonoBehaviour:
   lookAngle: 29.7
   quest: {fileID: 11400000, guid: b8aba7101f655d849a2c9a589b011065, type: 2}
   tracker: {fileID: 1226883292}
+  useQuestText: 1
+  includeDescription: 1
+  titleFormat: <b>{0}</b>
 --- !u!65 &117205570
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -587,6 +590,72 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &131787347
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 131787348}
+  - component: {fileID: 131787349}
+  m_Layer: 5
+  m_Name: PlayerAbilityWheel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &131787348
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131787347}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 797615257}
+  m_Father: {fileID: 885023230}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 233.9}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &131787349
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131787347}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c6a7227ade33f149bc25cb8169eccdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAbilityWheel
+  wheelRoot: {fileID: 131787347}
+  commandWheel: {fileID: 0}
+  iconTop: {fileID: 0}
+  iconRight: {fileID: 0}
+  iconBottom: {fileID: 0}
+  iconLeft: {fileID: 0}
+  highlightImage: {fileID: 0}
+  placeholderIcon: {fileID: 0}
+  wheelMessageLabel: {fileID: 0}
+  slotIcons:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  confirmTint: {r: 0.4, g: 1, b: 0.5, a: 1}
+  confirmHoldTime: 0.18
+  logDispatch: 1
 --- !u!4 &164588267 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 87117431835768757, guid: ddd619f9a6dc2c34a9ca27e0ba660131, type: 3}
@@ -2192,6 +2261,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 770836003}
   m_CullTransparentMesh: 1
+--- !u!1 &797615256
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 797615257}
+  - component: {fileID: 797615259}
+  - component: {fileID: 797615258}
+  m_Layer: 5
+  m_Name: Image (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &797615257
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 797615256}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 2.5379, y: 2.5379, z: 2.5379}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 131787348}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -458.5, y: -200.1}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &797615258
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 797615256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: ad0b68b34a9c115408bcbe25ec60ee0f, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &797615259
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 797615256}
+  m_CullTransparentMesh: 1
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -3174,6 +3318,7 @@ MonoBehaviour:
   viewCamera: {fileID: 1027168453}
   commandWheel: {fileID: 887047748}
   blockedByWheel: 1
+  abilityWheel: {fileID: 0}
   aim: {fileID: 1053582033}
   blockedByAiming: 1
   switchAdvantage: 1.2
@@ -4583,7 +4728,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionPrompt
   label: {fileID: 1917732275}
-  format: '[{0}]  {1}'
+  format: '{1} [{0}] Accept '
   fadeSpeed: 12
   faceCamera: 1
 --- !u!225 &1677014174
@@ -4671,7 +4816,7 @@ RectTransform:
   m_GameObject: {fileID: 1677014172}
   m_LocalRotation: {x: 0.05513735, y: 0.70495385, z: -0.05513735, w: 0.70495385}
   m_LocalPosition: {x: 0, y: 0, z: 3.611}
-  m_LocalScale: {x: 0.0008559128, y: 0.0008559128, z: 0.0008559128}
+  m_LocalScale: {x: 0.0013627844, y: 0.0013627844, z: 0.0013627844}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1311015457}
@@ -6377,6 +6522,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 382471622104150650, guid: 8df86de8facc5cf45958de3ce3aacc35, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1628077895}
+    - targetCorrespondingSourceObject: {fileID: 382471622104150650, guid: 8df86de8facc5cf45958de3ce3aacc35, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 131787348}
     - targetCorrespondingSourceObject: {fileID: 5523733192598794529, guid: 8df86de8facc5cf45958de3ce3aacc35, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1196523043}
