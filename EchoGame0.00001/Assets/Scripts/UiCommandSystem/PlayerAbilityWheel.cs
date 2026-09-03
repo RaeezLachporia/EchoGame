@@ -27,24 +27,18 @@ public class PlayerAbilityWheel : MonoBehaviour
     [SerializeField] private CommandWheel commandWheel;
 
     [Header("Wheel Pieces")]
-    [Tooltip("Icon Image sitting over the TOP slice (Y / 1).")]
+    [Tooltip("Icon Image on the TOP slice (Y / 1). Drag the child Image from the wheel here. Author its Source Image sprite in the Inspector — that's what shows on the slice.")]
     [SerializeField] private Image iconTop;
-    [Tooltip("Icon Image sitting over the RIGHT slice (B / 2).")]
+    [Tooltip("Icon Image on the RIGHT slice (B / 2). Drag the child Image from the wheel here.")]
     [SerializeField] private Image iconRight;
-    [Tooltip("Icon Image sitting over the BOTTOM slice (A / 3).")]
+    [Tooltip("Icon Image on the BOTTOM slice (A / 3). Drag the child Image from the wheel here.")]
     [SerializeField] private Image iconBottom;
-    [Tooltip("Icon Image sitting over the LEFT slice (X / 4).")]
+    [Tooltip("Icon Image on the LEFT slice (X / 4). Drag the child Image from the wheel here.")]
     [SerializeField] private Image iconLeft;
-    [Tooltip("The single highlight wedge. Author the sprite pointing at the TOP slice — the wheel rotates it to the other three.")]
+    [Tooltip("The rotating highlight wedge. Author its sprite pointing at the TOP slice — the wheel rotates it to the other three at confirm-flash time.")]
     [SerializeField] private Image highlightImage;
-    [Tooltip("Stand-in for a slice whose ability has no icon yet. Wire this to wheel_slot_default so an unauthored slot still reads as occupied instead of blank.")]
-    [SerializeField] private Sprite placeholderIcon;
     [Tooltip("Reusable message line for this wheel — the CODE writes what shows here. Drag a TMP text; leave empty to skip.")]
     [SerializeField] private TMP_Text wheelMessageLabel;
-
-    [Header("Slots")]
-    [Tooltip("Icon per slice: 0 = TOP, 1 = RIGHT, 2 = BOTTOM, 3 = LEFT. Deliberately an ARRAY rather than four named fields like CommandWheel uses — mission classes will swap the whole loadout at runtime through SetSlotIcon(), which four fixed Inspector references could not do. Leave empty to see placeholder slices.")]
-    [SerializeField] private Sprite[] slotIcons = new Sprite[4];
 
     [Header("Highlight Tints")]
     [Tooltip("Highlight tint flashed on the slice that actually fired.")]
@@ -63,7 +57,9 @@ public class PlayerAbilityWheel : MonoBehaviour
     private InputAction slotBottomAction;
     private InputAction slotLeftAction;
 
-    private Image[] icons; // top, right, bottom, left — same order as slices
+    // The four icon Images in slice order, cached from the serialized fields for
+    // index-based access (SetSlotIcon by slice number).
+    private Image[] iconSlots;
     private bool wasOpen;
     private float confirmTimer;
 
@@ -113,7 +109,7 @@ public class PlayerAbilityWheel : MonoBehaviour
 
         if (commandWheel == null) commandWheel = FindObjectOfType<CommandWheel>();
 
-        icons = new[] { iconTop, iconRight, iconBottom, iconLeft };
+        iconSlots = new[] { iconTop, iconRight, iconBottom, iconLeft };
         lastInputWasGamepad = Gamepad.current != null;
     }
 
@@ -158,6 +154,18 @@ public class PlayerAbilityWheel : MonoBehaviour
             Debug.LogError($"[PlayerAbilityWheel] '{name}' has Wheel Root pointing at its own GameObject. Deactivating it would stop this script running, so the wheel would close once and never reopen. Move this component onto a parent that stays active.", this);
         }
 
+        if (iconSlots != null)
+        {
+            for (int i = 0; i < iconSlots.Length; i++)
+            {
+                if (iconSlots[i] == null)
+                    Debug.LogWarning($"[PlayerAbilityWheel] '{name}' has no Image dragged into the {SliceName(i)} slot — that slice will render nothing. Wire the four icon Images in the Inspector.", this);
+            }
+        }
+
+        if (highlightImage == null)
+            Debug.LogWarning($"[PlayerAbilityWheel] '{name}' has no Highlight Image assigned — the confirm-flash wedge will not render. Drag the wedge Image into the Highlight Image field.", this);
+
         CloseWheel();
         wasOpen = false;
     }
@@ -184,7 +192,6 @@ public class PlayerAbilityWheel : MonoBehaviour
 
     private void OpenWheel()
     {
-        RefreshIcons();
         HideHighlight();
         confirmTimer = 0f;
         if (wheelRoot != null) wheelRoot.SetActive(true);
@@ -224,25 +231,12 @@ public class PlayerAbilityWheel : MonoBehaviour
     }
 
     // Entry point for the mission class loadout: swap what a slice shows when the
-    // player picks a class. Nothing calls this yet.
+    // player picks a class. Writes straight to the Image's sprite so the swap is
+    // live whether the wheel is open or closed. Nothing calls this yet.
     public void SetSlotIcon(int slice, Sprite icon)
     {
-        if (slotIcons == null || slice < 0 || slice >= slotIcons.Length) return;
-        slotIcons[slice] = icon;
-        if (IsOpen) RefreshIcons();
-    }
-
-    // Every live slice shows its icon, falling back to the placeholder so a slot
-    // that exists but has no art still reads as occupied rather than broken.
-    // With no loadout wired yet, that means four placeholder slices.
-    private void RefreshIcons()
-    {
-        if (icons == null) return;
-        for (int i = 0; i < icons.Length; i++)
-        {
-            Sprite authored = slotIcons != null && i < slotIcons.Length ? slotIcons[i] : null;
-            SetIcon(icons[i], Resolve(authored));
-        }
+        if (iconSlots == null || slice < 0 || slice >= iconSlots.Length) return;
+        SetIcon(iconSlots[slice], icon);
     }
 
     private void RecordInputDevice(InputAction.CallbackContext ctx)
@@ -283,13 +277,6 @@ public class PlayerAbilityWheel : MonoBehaviour
     {
         if (wheelMessageLabel == null) return;
         wheelMessageLabel.gameObject.SetActive(false);
-    }
-
-    // Null sprite on a live slice -> placeholder. Written out rather than using ??
-    // because Unity's overloaded == does not play well with null-coalescing.
-    private Sprite Resolve(Sprite sprite)
-    {
-        return sprite != null ? sprite : placeholderIcon;
     }
 
     private static void SetIcon(Image image, Sprite sprite)
