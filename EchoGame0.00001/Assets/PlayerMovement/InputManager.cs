@@ -107,5 +107,6 @@ public class InputManager : MonoBehaviour
       moveAmount = Mathf.Clamp01(Mathf.Abs(horizontalInput) + Mathf.Abs(verticalInput));
       float animMoveAmount = isSprinting ? moveAmount * 2f : moveAmount;
       animatorManager.updateAnimatorValues(0, animMoveAmount, isSprinting);
+
    }
 }
