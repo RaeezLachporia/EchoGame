@@ -1964,6 +1964,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!114 &1208720831 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7006987849507554203, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
+  m_PrefabInstance: {fileID: 631030773565371693}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1 &1309096940
 GameObject:
   m_ObjectHideFlags: 0
@@ -2633,7 +2644,7 @@ PrefabInstance:
     - target: {fileID: 4310664402658646050, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
       propertyPath: questText
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1208720831}
     - target: {fileID: 7135470963240337529, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
