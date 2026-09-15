@@ -243,6 +243,26 @@ public class QuestTracker : MonoBehaviour
         return false;
     }
 
+    // True once an objective in any running quest has been finished. ObjectiveBarrier
+    // uses this to work out whether it should start open — a door whose objective was
+    // already done (a save loaded mid-level, or a barrier bound to an early step)
+    // shouldn't slam shut again. False for an objective that hasn't started, doesn't
+    // exist, or is still running.
+    public bool IsObjectiveComplete(string objectiveId)
+    {
+        for (int q = 0; q < quests.Count; q++)
+        {
+            List<ObjectiveProgress> objectives = quests[q].objectives;
+            for (int o = 0; o < objectives.Count; o++)
+            {
+                ObjectiveProgress objective = objectives[o];
+                if (objective.definition != null && objective.definition.id == objectiveId)
+                    return objective.state == ObjectiveState.Complete;
+            }
+        }
+        return false;
+    }
+
     // ---------------------------------------------------------------- kill tracking
 
     // An enemy died. Tick every active objective that cares, then move the quests on.
