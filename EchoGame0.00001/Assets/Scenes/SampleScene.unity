@@ -4147,8 +4147,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad8d2a960da8022468133f711e297b4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
-  soundList:
-  - {fileID: 8300000, guid: 8a55a654c80c3154bac3e2a317e1f9b0, type: 3}
+  sounds:
+  - name: Run
+    clip: {fileID: 8300000, guid: bc6e95a2bd2edc14db687c6733d7c63a, type: 3}
+    volume: 1
+    pitch: 1.01
+    loop: 1
+    type: 0
+    source: {fileID: 0}
+  masterVolume: 1
+  musicVolume: 1
+  sfxVolume: 1
+  dontDestroyOnLoad: 1
 --- !u!82 &1633932647
 AudioSource:
   m_ObjectHideFlags: 0

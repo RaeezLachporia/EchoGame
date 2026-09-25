@@ -535,22 +535,6 @@ AnimatorStateTransition:
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 0
---- !u!114 &5174294277055390153
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: af4bab288e54f474fa2b61f982ac8d6b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlaySoundExit
-  sound: 0
-  volume: 1
-  requireMotion: 0
-  minSpeedSqr: 0.05
 --- !u!1102 &7747745948301885156
 AnimatorState:
   serializedVersion: 6
@@ -566,7 +550,6 @@ AnimatorState:
   - {fileID: -1937489620320143098}
   m_StateMachineBehaviours:
   - {fileID: -2126343499214690898}
-  - {fileID: 5174294277055390153}
   m_Position: {x: 50, y: 50, z: 0}
   m_IKOnFeet: 0
   m_WriteDefaultValues: 1

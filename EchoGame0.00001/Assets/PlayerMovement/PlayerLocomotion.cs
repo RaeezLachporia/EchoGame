@@ -206,13 +206,25 @@ public class PlayerLocomotion : MonoBehaviour
       if (isGrounded)
       {
          playerRigidBody.linearVelocity = moveDirection;
-      }
+            
+            if (inputManager.moveAmount > 0.1f)
+            {
+                AudioManager.Instance.PlayIfNotPlaying("Run");
+            }
+            else
+            {
+                AudioManager.Instance.Stop("Run");
+            }
+        }
       else
       {
          // Keep gravity/jump Y velocity, allow air steering
          playerRigidBody.linearVelocity = new Vector3(moveDirection.x, playerRigidBody.linearVelocity.y, moveDirection.z);
+            AudioManager.Instance.Stop("Run"); 
       }
-   }
+
+       
+    }
 
    private void handleRotation()
    {
