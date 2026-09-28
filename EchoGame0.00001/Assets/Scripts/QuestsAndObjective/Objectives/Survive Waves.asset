@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Survive Waves
   m_EditorClassIdentifier: Assembly-CSharp::ObjectiveDefinition
   id: Wave-Survival
-  title: Wave Survical
+  title: Wave Survival
   description: 'Fight through the waves to and clear every room '
   kind: 0
   targetGroup: waves

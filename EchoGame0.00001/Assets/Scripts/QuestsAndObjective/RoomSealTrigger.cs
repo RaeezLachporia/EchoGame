@@ -33,10 +33,19 @@ public class RoomSealTrigger : MonoBehaviour
     [Header("Debug")]
     [Tooltip("Log when the room seals and what it closed / started.")]
     [SerializeField] private bool logSeal = true;
+    [Tooltip("Log each time the player or a companion crosses into or out of the box, with a running count of who's inside and what's still holding the seal open. Turn this ON while getting the box size and position right, then off once it seals reliably.")]
+    [SerializeField] private bool logMembership = true;
 
     private BoxCollider box;
     private Transform player;
     private bool hasSealed;
+
+    // Debug bookkeeping so membership crossings only log on the frame they change,
+    // rather than every frame.
+    private bool prevPlayerInside;
+    private bool warnedNoPlayer;
+    private readonly HashSet<Comapnion> insidePrev = new HashSet<Comapnion>();
+    private readonly HashSet<Comapnion> insideNow = new HashSet<Comapnion>();
 
     void Reset()
     {
@@ -57,6 +66,11 @@ public class RoomSealTrigger : MonoBehaviour
             Debug.LogWarning($"[RoomSealTrigger] '{name}' has no Barriers To Close, so sealing the room won't actually shut anything. Drag the entrance ObjectiveBarrier(s) into the Barriers To Close list.", this);
 
         AcquirePlayer();
+
+        // The single most common reason it never seals is a box that doesn't actually
+        // reach where the party stands, so print its real world size up front.
+        if (logMembership && box != null)
+            Debug.Log($"[RoomSealTrigger] '{name}' watching a box of world size {box.bounds.size} centred at {box.bounds.center}. Needs {(requireWholeParty ? "the player + every companion" : "just the player")} inside it to seal. Walk in and watch for 'entered the box' lines.", this);
     }
 
     void Update()
@@ -66,10 +80,22 @@ public class RoomSealTrigger : MonoBehaviour
         if (player == null)
         {
             AcquirePlayer();
-            if (player == null) return;
+            if (player == null)
+            {
+                // Log this once rather than staying silent — a mistyped Player Tag
+                // means the trigger can NEVER seal, and nothing else would hint at why.
+                if (logMembership && !warnedNoPlayer)
+                {
+                    Debug.LogWarning($"[RoomSealTrigger] '{name}' can't find any object tagged '{playerTag}', so it will never seal. Check the tag on your player object matches the Player Tag field.", this);
+                    warnedNoPlayer = true;
+                }
+                return;
+            }
         }
 
         Bounds bounds = box.bounds;
+
+        if (logMembership) TrackMembership(bounds);
 
         // Player has to be in first — a companion wandering in alone shouldn't start
         // the fight.
@@ -78,6 +104,55 @@ public class RoomSealTrigger : MonoBehaviour
         if (requireWholeParty && !WholePartyInside(bounds)) return;
 
         Seal();
+    }
+
+    // Logs the player and each companion crossing into or out of the box, but only on
+    // the frame it changes. This reads position exactly the way the seal check does, so
+    // what it prints is precisely what's keeping the room from sealing — if a companion
+    // never shows an "entered" line, that's the one stuck outside.
+    private void TrackMembership(Bounds bounds)
+    {
+        bool playerInside = bounds.Contains(player.position);
+        if (playerInside != prevPlayerInside)
+        {
+            prevPlayerInside = playerInside;
+            if (playerInside)
+                Debug.Log($"[RoomSealTrigger] '{name}' — PLAYER entered the box. {InsideSummary(bounds)}", this);
+            else
+                Debug.Log($"[RoomSealTrigger] '{name}' — PLAYER left the box.", this);
+        }
+
+        insideNow.Clear();
+        IReadOnlyList<Comapnion> party = Comapnion.Active;
+        for (int i = 0; i < party.Count; i++)
+        {
+            Comapnion member = party[i];
+            if (member == null) continue;
+            if (bounds.Contains(member.transform.position)) insideNow.Add(member);
+        }
+
+        foreach (Comapnion member in insideNow)
+            if (!insidePrev.Contains(member))
+                Debug.Log($"[RoomSealTrigger] '{name}' — companion '{member.name}' entered the box. {InsideSummary(bounds)}", this);
+
+        foreach (Comapnion member in insidePrev)
+            if (member != null && !insideNow.Contains(member))
+                Debug.Log($"[RoomSealTrigger] '{name}' — companion '{member.name}' left the box.", this);
+
+        insidePrev.Clear();
+        foreach (Comapnion member in insideNow) insidePrev.Add(member);
+    }
+
+    // "2/3 party inside (needs all to seal)" — the running tally shown on each crossing.
+    private string InsideSummary(Bounds bounds)
+    {
+        IReadOnlyList<Comapnion> party = Comapnion.Active;
+        int total = 1 + party.Count;
+        int inside = bounds.Contains(player.position) ? 1 : 0;
+        for (int i = 0; i < party.Count; i++)
+            if (party[i] != null && bounds.Contains(party[i].transform.position)) inside++;
+
+        return $"{inside}/{total} inside" + (requireWholeParty ? " (needs all to seal)" : " (seals on player alone)");
     }
 
     // True only when every live companion is inside the box. Reads Comapnion.Active
