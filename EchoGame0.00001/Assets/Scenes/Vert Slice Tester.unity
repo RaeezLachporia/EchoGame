@@ -514,7 +514,7 @@ GameObject:
   - component: {fileID: 303132099}
   - component: {fileID: 303132102}
   - component: {fileID: 303132101}
-  - component: {fileID: 303132100}
+  - component: {fileID: 303132103}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -537,27 +537,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 354527364}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &303132100
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 303132098}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &303132101
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -615,6 +594,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 303132098}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!65 &303132103
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 303132098}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 0.99999994}
+  m_Center: {x: 0, y: 0.00000047683716, z: -0.0000038146973}
 --- !u!1 &327229121
 GameObject:
   m_ObjectHideFlags: 0
@@ -845,9 +845,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 354527364}
-  - component: {fileID: 354527365}
-  - component: {fileID: 354527366}
   - component: {fileID: 354527367}
+  - component: {fileID: 354527369}
+  - component: {fileID: 354527368}
+  - component: {fileID: 354527370}
   m_Layer: 0
   m_Name: Barrier1
   m_TagString: Untagged
@@ -864,14 +865,57 @@ Transform:
   m_GameObject: {fileID: 354527363}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -13.47, y: -1.36, z: -4.17}
+  m_LocalPosition: {x: -13.73, y: -1.36, z: -4.17}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 303132099}
   m_Father: {fileID: 1635640660}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &354527365
+--- !u!114 &354527367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 354527363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a6bb278675ed3c478c6f73d591e6fd4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjectiveBarrier
+  openOnObjectiveId: Wave Survival
+  tracker: {fileID: 1519462418}
+  blockingColliders:
+  - {fileID: 0}
+  wallVisual: {fileID: 303132098}
+  startOpen: 1
+  messageHud: {fileID: 0}
+  blockedMessage: Complete the current objective to proceed.
+  messageRange: 4
+  playerTag: Player
+  logBarrier: 1
+--- !u!114 &354527368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 354527363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef03ec265c2e40744a79e560b479e672, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoomSealTrigger
+  barriersToClose:
+  - {fileID: 354527367}
+  - {fileID: 354527367}
+  spawner: {fileID: 1085426798}
+  playerTag: Player
+  requireWholeParty: 1
+  logSeal: 1
+  logMembership: 1
+--- !u!65 &354527369
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -890,9 +934,9 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.9217987, y: 9.187809, z: 12.689697}
-  m_Center: {x: 0.04534149, y: 2.597353, z: -0.4723816}
---- !u!114 &354527366
+  m_Size: {x: 40.571793, y: 8.432629, z: 59.013977}
+  m_Center: {x: -20.205788, y: 2.9138546, z: 3.6128845}
+--- !u!114 &354527370
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -901,39 +945,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 354527363}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef03ec265c2e40744a79e560b479e672, type: 3}
+  m_Script: {fileID: 11500000, guid: 4b027d9b2fa50a749877effd408f337f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomSealTrigger
-  barriersToClose:
-  - {fileID: 354527367}
-  spawner: {fileID: 1085426798}
-  playerTag: Player
-  requireWholeParty: 1
-  logSeal: 1
-  logMembership: 1
---- !u!114 &354527367
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 354527363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a6bb278675ed3c478c6f73d591e6fd4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ObjectiveBarrier
-  openOnObjectiveId: Wave Survival
-  tracker: {fileID: 1519462418}
-  blockingColliders:
-  - {fileID: 354527365}
-  wallVisual: {fileID: 303132098}
-  startOpen: 1
-  messageHud: {fileID: 0}
-  blockedMessage: Complete the current objective to proceed.
-  messageRange: 4
-  playerTag: Player
-  logBarrier: 1
+  m_EditorClassIdentifier: Assembly-CSharp::WaveSpawner
+  spawnPoints:
+  - {fileID: 0}
+  enemyPrefab: {fileID: 0}
+  waves: []
+  maxActiveEnemies: 15
+  poolCapacity: 10
+  poolMaxSize: 30
+  tracker: {fileID: 0}
+  surviveWavesObjectiveId: survive-waves
+  logWaves: 1
 --- !u!114 &373813125 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7836486231011959594, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
@@ -1557,6 +1581,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8474267138053103200, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
+      propertyPath: healthLabel
+      value: 
+      objectReference: {fileID: 1275444707}
     - target: {fileID: 9180048390411923030, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -1927,6 +1955,118 @@ Camera:
   m_CorrespondingSourceObject: {fileID: 4198009819597301973, guid: be5d095047be5be4dacd17d90bd4f537, type: 3}
   m_PrefabInstance: {fileID: 1350907629}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &749652973
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 749652974}
+  - component: {fileID: 749652977}
+  - component: {fileID: 749652976}
+  - component: {fileID: 749652975}
+  m_Layer: 0
+  m_Name: Cube (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &749652974
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749652973}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.049995422, y: 2.52, z: -0.98}
+  m_LocalScale: {x: 1, y: 7.5726566, z: 9.286492}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1091896135}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &749652975
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749652973}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 0.99999994}
+  m_Center: {x: 0, y: 0.00000047683716, z: -0.0000038146973}
+--- !u!23 &749652976
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749652973}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a4b62a69d54e80347bd546999c6d4b9e, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &749652977
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749652973}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &755737881
 GameObject:
   m_ObjectHideFlags: 0
@@ -2497,6 +2637,8 @@ GameObject:
   - component: {fileID: 1091896135}
   - component: {fileID: 1091896137}
   - component: {fileID: 1091896136}
+  - component: {fileID: 1091896139}
+  - component: {fileID: 1091896138}
   m_Layer: 0
   m_Name: Barrier2
   m_TagString: Untagged
@@ -2516,7 +2658,8 @@ Transform:
   m_LocalPosition: {x: -13.68, y: -1.36, z: 25.34}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 749652974}
   m_Father: {fileID: 1635640660}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1091896136
@@ -2531,7 +2674,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2fe72528ddb68c64691f492c526f603d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaveStartTrigger
-  spawner: {fileID: 0}
+  spawner: {fileID: 1085426798}
   playerTag: Player
   fireOnce: 1
   logTrigger: 1
@@ -2556,6 +2699,48 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1091896138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1091896134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a6bb278675ed3c478c6f73d591e6fd4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObjectiveBarrier
+  openOnObjectiveId: 
+  tracker: {fileID: 1519462418}
+  blockingColliders:
+  - {fileID: 0}
+  wallVisual: {fileID: 0}
+  startOpen: 0
+  messageHud: {fileID: 0}
+  blockedMessage: Complete the current objective to proceed.
+  messageRange: 4
+  playerTag: Player
+  logBarrier: 1
+--- !u!114 &1091896139
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1091896134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef03ec265c2e40744a79e560b479e672, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoomSealTrigger
+  barriersToClose:
+  - {fileID: 1091896138}
+  spawner: {fileID: 0}
+  playerTag: Player
+  requireWholeParty: 1
+  logSeal: 1
+  logMembership: 1
 --- !u!1 &1100171938
 GameObject:
   m_ObjectHideFlags: 0
@@ -3012,6 +3197,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 105f7faabfa8def46b596c1d51a39406, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAimZoom
+--- !u!114 &1275444707 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5287046373641687943, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
+  m_PrefabInstance: {fileID: 577455722}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1001 &1299267425
 PrefabInstance:
   m_ObjectHideFlags: 0
