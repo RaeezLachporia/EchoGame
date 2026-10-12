@@ -362,6 +362,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1883806100171782795, guid: 73d930d37623209479d01e5018a02b33, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -53.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1883806100171782795, guid: 73d930d37623209479d01e5018a02b33, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 19.74
+      objectReference: {fileID: 0}
+    - target: {fileID: 5107164712740788636, guid: 73d930d37623209479d01e5018a02b33, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -59.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5107164712740788636, guid: 73d930d37623209479d01e5018a02b33, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 55.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5643863358586089232, guid: 73d930d37623209479d01e5018a02b33, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 39.6
+      objectReference: {fileID: 0}
     - target: {fileID: 6764790771860003471, guid: 73d930d37623209479d01e5018a02b33, type: 3}
       propertyPath: m_LocalPosition.x
       value: -210.4
@@ -848,7 +868,6 @@ GameObject:
   - component: {fileID: 354527367}
   - component: {fileID: 354527369}
   - component: {fileID: 354527368}
-  - component: {fileID: 354527370}
   m_Layer: 0
   m_Name: Barrier1
   m_TagString: Untagged
@@ -936,28 +955,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 40.571793, y: 8.432629, z: 59.013977}
   m_Center: {x: -20.205788, y: 2.9138546, z: 3.6128845}
---- !u!114 &354527370
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 354527363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4b027d9b2fa50a749877effd408f337f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaveSpawner
-  spawnPoints:
-  - {fileID: 0}
-  enemyPrefab: {fileID: 0}
-  waves: []
-  maxActiveEnemies: 15
-  poolCapacity: 10
-  poolMaxSize: 30
-  tracker: {fileID: 0}
-  surviveWavesObjectiveId: survive-waves
-  logWaves: 1
 --- !u!114 &373813125 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7836486231011959594, guid: 2e4a354d9216c294fbd5d3f2cfd8fec9, type: 3}
@@ -2635,10 +2632,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1091896135}
-  - component: {fileID: 1091896137}
   - component: {fileID: 1091896136}
-  - component: {fileID: 1091896139}
-  - component: {fileID: 1091896138}
   m_Layer: 0
   m_Name: Barrier2
   m_TagString: Untagged
@@ -2671,47 +2665,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1091896134}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2fe72528ddb68c64691f492c526f603d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaveStartTrigger
-  spawner: {fileID: 1085426798}
-  playerTag: Player
-  fireOnce: 1
-  logTrigger: 1
---- !u!65 &1091896137
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1091896134}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1091896138
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1091896134}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a6bb278675ed3c478c6f73d591e6fd4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ObjectiveBarrier
-  openOnObjectiveId: 
+  openOnObjectiveId: Wave Survival
   tracker: {fileID: 1519462418}
   blockingColliders:
   - {fileID: 0}
@@ -2722,25 +2679,6 @@ MonoBehaviour:
   messageRange: 4
   playerTag: Player
   logBarrier: 1
---- !u!114 &1091896139
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1091896134}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef03ec265c2e40744a79e560b479e672, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomSealTrigger
-  barriersToClose:
-  - {fileID: 1091896138}
-  spawner: {fileID: 0}
-  playerTag: Player
-  requireWholeParty: 1
-  logSeal: 1
-  logMembership: 1
 --- !u!1 &1100171938
 GameObject:
   m_ObjectHideFlags: 0
