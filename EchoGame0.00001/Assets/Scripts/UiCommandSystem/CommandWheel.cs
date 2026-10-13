@@ -623,11 +623,29 @@ public class CommandWheel : MonoBehaviour
         // Same sweep PlayerLockOn uses — enemy counts are small and this runs once
         // per press, so a find-by-type is cheap enough.
         EnemyHighlight[] found = FindObjectsOfType<EnemyHighlight>();
+
+        // TEMP diagnostic — remove once enemy-cycle targeting is confirmed working.
+        // Prints what the scan measured from and what it found, so an empty list
+        // (never opens the enemy cycle) can be traced to range, origin, or no
+        // EnemyHighlight in the scene at all.
+        if (logDispatch)
+            Debug.Log($"[CommandWheel] EnemyCycle scan — origin: {(origin != null ? origin.name : "<none: using wheel transform>")} @ {from}, range: {enemyCycleRange}, EnemyHighlight found in scene: {found.Length}");
+
         for (int i = 0; i < found.Length; i++)
         {
             Transform t = found[i] != null ? found[i].transform : null;
-            if (t == null || !t.gameObject.activeInHierarchy) continue;
-            if ((t.position - from).sqrMagnitude > enemyCycleRange * enemyCycleRange) continue;
+            if (t == null || !t.gameObject.activeInHierarchy)
+            {
+                if (logDispatch && found[i] != null) Debug.Log($"[CommandWheel]   skip '{found[i].name}': GameObject inactive.");
+                continue;
+            }
+            float dist = Vector3.Distance(t.position, from);
+            if (dist > enemyCycleRange)
+            {
+                if (logDispatch) Debug.Log($"[CommandWheel]   skip '{t.name}': {dist:F1}m from origin, past range {enemyCycleRange}.");
+                continue;
+            }
+            if (logDispatch) Debug.Log($"[CommandWheel]   keep '{t.name}': {dist:F1}m from origin.");
             cycleEnemies.Add(t);
         }
 
