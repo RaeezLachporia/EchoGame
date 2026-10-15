@@ -53,9 +53,28 @@ public class WaveStartTrigger : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
+        // TEMP diagnostic — logs EVERY collider that enters, before any filtering, so
+        // "the trigger never fires" (no lines at all → a physics problem) can be told
+        // apart from "fires but doesn't recognise the player" (a line with the wrong
+        // tag). Remove once wave-start is confirmed.
+        if (logTrigger)
+            Debug.Log($"[WaveStartTrigger] '{name}' OnTriggerEnter by '{other.name}' — tag '{other.tag}', rigidbody '{(other.attachedRigidbody != null ? other.attachedRigidbody.name : "none")}'.", this);
+
         if (fireOnce && fired) return;
-        if (!other.CompareTag(playerTag)) return;
-        if (spawner == null) return;
+
+        // Match on the entering collider's tag OR its rigidbody's tag. The player's
+        // collider is usually on a child object while only the root carries the Player
+        // tag, so a plain other.CompareTag(playerTag) silently misses it — the
+        // rigidbody is on the tagged root, so attachedRigidbody catches that case.
+        bool isPlayer = other.CompareTag(playerTag)
+            || (other.attachedRigidbody != null && other.attachedRigidbody.CompareTag(playerTag));
+        if (!isPlayer) return;
+
+        if (spawner == null)
+        {
+            if (logTrigger) Debug.LogWarning($"[WaveStartTrigger] '{name}' — player crossed it, but no Spawner is assigned so nothing starts. Drag the WaveSpawner into the Spawner field.", this);
+            return;
+        }
 
         fired = true;
 
