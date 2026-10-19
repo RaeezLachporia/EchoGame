@@ -2066,7 +2066,7 @@ MonoBehaviour:
   poolCapacity: 4
   poolMaxSize: 4
   tracker: {fileID: 1519462418}
-  surviveWavesObjectiveId: Wave Survival
+  surviveWavesObjectiveId: survive-waves
   logWaves: 1
 --- !u!1 &812193088
 GameObject:
