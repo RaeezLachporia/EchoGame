@@ -4155,6 +4155,13 @@ MonoBehaviour:
     loop: 1
     type: 0
     source: {fileID: 0}
+  - name: Run
+    clip: {fileID: 8300000, guid: bc6e95a2bd2edc14db687c6733d7c63a, type: 3}
+    volume: 1
+    pitch: 1.01
+    loop: 1
+    type: 0
+    source: {fileID: 0}
   masterVolume: 1
   musicVolume: 1
   sfxVolume: 1
